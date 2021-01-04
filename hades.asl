@@ -38,17 +38,16 @@ init
 	vars.app = ExtensionMethods.ReadPointer(game, app_ptr_ref);
 	vars.world = ExtensionMethods.ReadPointer(game, world_ptr_ref); // Just dereference ptr
 	vars.playermanager = ExtensionMethods.ReadPointer(game, playermanager_ptr_ref);
-	
+
 	vars.screen_manager = ExtensionMethods.ReadPointer(game, vars.app + 0x3E0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
 	vars.current_player = ExtensionMethods.ReadPointer(game, ExtensionMethods.ReadPointer(game, vars.playermanager + 0x18));
-	//print("Player: 0x" + vars.current_player.ToString("x"));
 
 	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
-	
+
 	/* Misc. vars */
 	vars.split = 0;
-	vars.current_run_time = 0;
-	vars.current_map = 0;
+	vars.current_run_time = "0:0.0";
+	vars.current_map = "";
 	vars.current_total_seconds = 0;
 	vars.can_move_counter = 0;
 	vars.has_beat_hades = false;
@@ -58,7 +57,7 @@ update
 {
 	int last_block_count = vars.current_block_count;
 	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
-	
+
 	/* Check if hash table size has changed */
 	if(last_block_count  != vars.current_block_count)
 	{
@@ -104,7 +103,11 @@ update
 			/* This might break if the run goes over 99 minutes T_T */
       vars.old_run_time = vars.current_run_time;
 			vars.current_run_time = ExtensionMethods.ReadString(game, ExtensionMethods.ReadPointer(game, runtime_component + 0xAB8), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
-			//print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
+      if(vars.current_run_time == "PauseScr")
+      {
+        vars.current_run_time = "0:0.0";
+      }
+      print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
 		}
 	}
 
@@ -117,16 +120,15 @@ update
 		{
       vars.old_map = vars.current_map;
 			vars.current_map = ExtensionMethods.ReadString(game, map_data + 0x8, 0x10);
-			//print("Map: " + vars.current_map + ", Last:" + vars.old_map);
+			print("Map: " + vars.current_map + ", Last:" + vars.old_map);
 		}
 	}
-	
+
 	/* Unused for now */
 	IntPtr player_unit = ExtensionMethods.ReadPointer(game, vars.current_player + 0x18);
 	if(player_unit != IntPtr.Zero)
 	{
-		IntPtr unit_input = ExtensionMethods.ReadPointer(game, player_unit + 0x560); // Could change -> 48 8B 91 ? ? ? ? 88 42 08 
-		
+		IntPtr unit_input = ExtensionMethods.ReadPointer(game, player_unit + 0x560); // Could change -> 48 8B 91 ? ? ? ? 88 42 08
 	}
 
   vars.old_total_seconds = vars.current_total_seconds;
@@ -140,19 +142,27 @@ update
 
 start
 {
-		return (vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds);
+  // Start the timer if in the first room and the timer either ticked up from 0, or if the old timer is greater than the new (in case of a dangling value from a previous run)
+	return (vars.current_map == "RoomOpening" && (vars.old_total_seconds > vars.current_total_seconds || (vars.old_total_seconds == 0 && vars.current_total_seconds != 0)));
 }
 
 split
 {
-  // Credits: ellemonop
+  // Credits: ellomenop
+  // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
   if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split == 0)
      ||
+     // 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
      ((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split == 1)
      ||
+     // 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
      (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split == 2)
      ||
-     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split == 3))
+     // 4th Split if old map was the styx hub and new room is the dad fight
+     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split == 3)
+     ||
+     // 5th and final split if we have beat dad
+     (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split == 4))
     {
       vars.split++;
       return true;
@@ -161,6 +171,7 @@ split
 
 reset
 {
+  // Reset and clear state if Zag is currently in the courtyard
 	if(vars.current_map == "RoomPreRun")
 	{
 		vars.split = 0;
@@ -180,18 +191,4 @@ gameTime
   int ms = Convert.ToInt32(vars.time_split[2] + "0");
 
   return new TimeSpan(0, h, m, s, ms);
-}
-
-isLoading
-{
-	/*
-		Our player's `unit` is deleted upon level exit and recreated upon level enter,
-		This can be considered our 'loading time'
-	*/
-	IntPtr player_unit = ExtensionMethods.ReadPointer(game, vars.current_player + 0x18);
-	return player_unit != IntPtr.Zero;
-	
-	/*
-		TODO: We now have the ability to track input blocks, we can add these to the checks.
-	*/
 }
