@@ -26,8 +26,9 @@ startup
 
 init
 {
+	/* Kind of hacky, this is used since it may take a second for the game to load our engine module */
+	Thread.Sleep(2000);
 	/* Do our signature scanning */
-
 	var engine = modules.FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s")); // DX = EngineWin64s.dll, VK = EngineWin64sv.dll
 	var app_sig_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
 	var world_sig_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
@@ -114,7 +115,7 @@ update
       {
         vars.current_run_time = "0:0.0";
       }
-      print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
+      //print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
 		}
 	}
 
@@ -127,7 +128,7 @@ update
 		{
 			vars.old_map = vars.current_map;
 			vars.current_map = ExtensionMethods.ReadString(game, map_data + 0x8, 0x10);
-			print("Map: " + vars.current_map + ", Last:" + vars.old_map);
+			//print("Map: " + vars.current_map + ", Last:" + vars.old_map);
 		}
 	}
 
