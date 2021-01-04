@@ -152,7 +152,7 @@ split
      ||
      (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split == 2)
      ||
-     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split == 0))
+     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split == 3))
     {
       vars.split++;
       return true;
