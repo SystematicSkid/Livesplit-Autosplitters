@@ -1,4 +1,8 @@
-// Created by Sebastien S. (SystemFailu.re)
+/*
+	Credits
+		Sebastien S. (SystemFailu.re) : Creating main script, reversing engine.
+		ellomenop : Doing splits, helping test & misc. bug fixes.
+*/
 
 state("Hades")
 {
@@ -10,8 +14,8 @@ state("Hades")
 
 startup
 {
-// Credits: Doom asl I found
-vars.ReadOffset = (Func<Process, IntPtr, int, int, IntPtr>)((proc, ptr, offsetSize, remainingBytes) =>
+	// Credits: Doom asl I found
+	vars.ReadOffset = (Func<Process, IntPtr, int, int, IntPtr>)((proc, ptr, offsetSize, remainingBytes) =>
 	{
 		byte[] offsetBytes;
 		if (ptr == IntPtr.Zero || !proc.ReadBytes(ptr, offsetSize, out offsetBytes))
@@ -74,25 +78,28 @@ update
 	}
 
 	/* Get our vector pointers, used to iterate through current screens */
-	/* We might need to nullptr check these */
-	IntPtr screen_vector_begin = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x48);
-	IntPtr screen_vector_end = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x50);
-	var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) >> 3;
-	for(int i = 0; i < num_screens; i++)
+	if(vars.screen_manager != IntPtr.Zero)
 	{
-		IntPtr current_screen = ExtensionMethods.ReadPointer(game, screen_vector_begin + 0x8 * i);
-		if(current_screen == IntPtr.Zero)
-			continue;
-		IntPtr screen_vtable = ExtensionMethods.ReadPointer(game, current_screen); // Deref to get vtable
-		IntPtr get_type_method = ExtensionMethods.ReadPointer(game, screen_vtable + 0x68); // Unlikely to change
-		int screen_type = ExtensionMethods.ReadValue<int>(game,get_type_method + 0x1);
-		if((screen_type & 0x7) == 7)
+		IntPtr screen_vector_begin = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x48);
+		IntPtr screen_vector_end = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x50);
+		var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) >> 3;
+		for(int i = 0; i < num_screens; i++)
 		{
-			// We have found the InGameUI screen.
-			vars.game_ui = current_screen;
-			// Possibly stop loop once this has been found? Not sure if this pointer is destructed anytime.
+			IntPtr current_screen = ExtensionMethods.ReadPointer(game, screen_vector_begin + 0x8 * i);
+			if(current_screen == IntPtr.Zero)
+				continue;
+			IntPtr screen_vtable = ExtensionMethods.ReadPointer(game, current_screen); // Deref to get vtable
+			IntPtr get_type_method = ExtensionMethods.ReadPointer(game, screen_vtable + 0x68); // Unlikely to change
+			int screen_type = ExtensionMethods.ReadValue<int>(game,get_type_method + 0x1);
+			if((screen_type & 0x7) == 7)
+			{
+				// We have found the InGameUI screen.
+				vars.game_ui = current_screen;
+				// Possibly stop loop once this has been found? Not sure if this pointer is destructed anytime.
+			}
 		}
 	}
+	
 
 	/* Get our current run time */
 	if(vars.game_ui != IntPtr.Zero)
@@ -118,7 +125,7 @@ update
 		IntPtr map_data = ExtensionMethods.ReadPointer(game, vars.world + 0xA0); // Unlikely to change.
 		if(map_data != IntPtr.Zero)
 		{
-      vars.old_map = vars.current_map;
+			vars.old_map = vars.current_map;
 			vars.current_map = ExtensionMethods.ReadString(game, map_data + 0x8, 0x10);
 			print("Map: " + vars.current_map + ", Last:" + vars.old_map);
 		}
@@ -174,6 +181,7 @@ reset
   // Reset and clear state if Zag is currently in the courtyard
 	if(vars.current_map == "RoomPreRun")
 	{
+		/* Reset all of our dynamic variables. */
 		vars.split = 0;
 		vars.time_split = "0:0.0".Split(':', '.');
 		vars.current_total_seconds = 0;
