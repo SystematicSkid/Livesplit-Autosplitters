@@ -28,7 +28,7 @@ init
 {
 	/* Do our signature scanning */
 
-	var engine = modules.Single(x => String.Equals(x.ModuleName, "EngineWin64s.dll", StringComparison.OrdinalIgnoreCase));
+	var engine = modules.FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s")); // DX = EngineWin64s.dll, VK = EngineWin64sv.dll
 	var app_sig_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
 	var world_sig_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
 	var playermanager_sig_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB ");
