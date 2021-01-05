@@ -51,10 +51,10 @@ init
 
 	/* Misc. vars */
 	vars.split = 0;
-	vars.current_run_time = "0:0.0";
+	vars.current_run_time = "0:0.1";
 	vars.current_map = "";
-	vars.current_total_seconds = 0;
-	vars.can_move_counter = 0;
+	vars.old_total_seconds = 0.1;
+	vars.current_total_seconds = 0.1;
 	vars.has_beat_hades = false;
 }
 
@@ -64,7 +64,7 @@ update
 	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
 
 	/* Check if hash table size has changed */
-	if(last_block_count  != vars.current_block_count)
+	if(last_block_count != vars.current_block_count)
 	{
 		IntPtr hash_table = ExtensionMethods.ReadPointer(game, vars.current_player + 0x40);
 		for(int i = 0; i < 2; i++)
@@ -109,13 +109,13 @@ update
 		if(runtime_component != IntPtr.Zero)
 		{
 			/* This might break if the run goes over 99 minutes T_T */
-      vars.old_run_time = vars.current_run_time;
+			vars.old_run_time = vars.current_run_time;
 			vars.current_run_time = ExtensionMethods.ReadString(game, ExtensionMethods.ReadPointer(game, runtime_component + 0xAB8), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
-      if(vars.current_run_time == "PauseScr")
-      {
-        vars.current_run_time = "0:0.0";
-      }
-      //print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
+			if(vars.current_run_time == "PauseScr")
+			{
+				vars.current_run_time = "0:0.1";
+			}
+			//print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
 		}
 	}
 
@@ -150,8 +150,13 @@ update
 
 start
 {
-  // Start the timer if in the first room and the timer either ticked up from 0, or if the old timer is greater than the new (in case of a dangling value from a previous run)
-	return (vars.current_map == "RoomOpening" && (vars.old_total_seconds > vars.current_total_seconds || (vars.old_total_seconds == 0 && vars.current_total_seconds != 0)));
+	// Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
+	if (vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds)
+	{
+		vars.split = 0;
+		vars.has_beat_hades = false;
+		return true;
+	}
 }
 
 split
@@ -184,9 +189,8 @@ reset
 	{
 		/* Reset all of our dynamic variables. */
 		vars.split = 0;
-		vars.time_split = "0:0.0".Split(':', '.');
-		vars.current_total_seconds = 0;
-		vars.can_move_counter = 0;
+		vars.time_split = "0:0.1".Split(':', '.');
+		vars.current_total_seconds = .1;
 		vars.has_beat_hades = false;
 		return true;
 	}
