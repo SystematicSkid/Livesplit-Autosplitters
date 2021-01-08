@@ -22,6 +22,8 @@ startup
 			return IntPtr.Zero;
 		return ptr + offsetSize + remainingBytes + BitConverter.ToInt32(offsetBytes, 0);
 	});
+
+  settings.Add("multiWep", false, "Multi Weapon Run");
 }
 
 init
@@ -163,19 +165,19 @@ split
 {
   // Credits: ellomenop
   // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
-  if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split == 0)
+  if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split % 5 == 0)
      ||
      // 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
-     ((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split == 1)
+     ((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split % 5 == 1)
      ||
      // 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
-     (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split == 2)
+     (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split % 5 == 2)
      ||
      // 4th Split if old map was the styx hub and new room is the dad fight
-     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split == 3)
+     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % 5 == 3)
      ||
      // 5th and final split if we have beat dad
-     (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split == 4))
+     (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % 5 == 4))
     {
       vars.split++;
       return true;
@@ -184,8 +186,8 @@ split
 
 reset
 {
-  // Reset and clear state if Zag is currently in the courtyard
-	if(vars.current_map == "RoomPreRun")
+  // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
+	if(vars.current_map == "RoomPreRun" && !settings["multiWep"])
 	{
 		/* Reset all of our dynamic variables. */
 		vars.split = 0;
