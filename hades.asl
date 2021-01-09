@@ -180,8 +180,8 @@ split
      (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % 5 == 4))
     {
       vars.split++;
-      
-      -- Clear this flag so that its false for the next weapon in multi-weapon runs
+
+      // Clear this flag so that its false for the next weapon in multi-weapon runs
       vars.has_beat_hades = false;
       return true;
     }
