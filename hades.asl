@@ -112,7 +112,7 @@ update
 		{
 			/* This might break if the run goes over 99 minutes T_T */
 			vars.old_run_time = vars.current_run_time;
-			vars.current_run_time = ExtensionMethods.ReadString(game, ExtensionMethods.ReadPointer(game, runtime_component + 0xAB8), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
+			vars.current_run_time = ExtensionMethods.ReadString(game, ExtensionMethods.ReadPointer(game, runtime_component + 0xA98), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
 			if(vars.current_run_time == "PauseScr")
 			{
 				vars.current_run_time = "0:0.1";
