@@ -46,7 +46,7 @@ init
 	vars.world = ExtensionMethods.ReadPointer(game, world_ptr_ref); // Just dereference ptr
 	vars.playermanager = ExtensionMethods.ReadPointer(game, playermanager_ptr_ref);
 
-	vars.screen_manager = ExtensionMethods.ReadPointer(game, vars.app + 0x3E0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
+	vars.screen_manager = ExtensionMethods.ReadPointer(game, vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
 	vars.current_player = ExtensionMethods.ReadPointer(game, ExtensionMethods.ReadPointer(game, vars.playermanager + 0x18));
 
 	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
