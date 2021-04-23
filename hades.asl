@@ -107,7 +107,7 @@ update
 	/* Get our current run time */
 	if(vars.game_ui != IntPtr.Zero)
 	{
-		IntPtr runtime_component = ExtensionMethods.ReadPointer(game, vars.game_ui + 0x510); // Possible to change if they adjust the UI class
+		IntPtr runtime_component = ExtensionMethods.ReadPointer(game, vars.game_ui + 0x518); // Possible to change if they adjust the UI class
 		if(runtime_component != IntPtr.Zero)
 		{
 			/* This might break if the run goes over 99 minutes T_T */
