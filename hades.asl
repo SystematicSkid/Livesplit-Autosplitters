@@ -196,7 +196,7 @@ split
 	  if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed == 1 && vars.split % vars.totalSplits == vars.splitOffset)
 	  	||
 		// 2nd split if in lernie room and hydra killed
-	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed == 1 && vvars.split % vars.totalSplits == 1 + vars.splitOffset)
+	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed == 1 && vars.split % vars.totalSplits == 1 + vars.splitOffset)
 		||
 		// 3rd split if in heroes' arena and heroes are both killed 
 		(vars.current_map == "C_Boss01" && vars.boss_killed == 2 && vars.split % vars.totalSplits == 2 + vars.splitOffset)
