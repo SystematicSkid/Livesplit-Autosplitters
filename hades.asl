@@ -24,7 +24,7 @@ startup
 	});
 
   settings.Add("multiWep", false, "Multi Weapon Run");
-  settings.Add("houseSplits", false, "Use House Splits");
+  settings.Add("houseSplits", false, "Use House Splits", parent="multiWep");
   settings.Add("splitOnBossKill", false, "Split on Boss Kills");
 }
 
