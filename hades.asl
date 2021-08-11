@@ -61,6 +61,8 @@ init
 	vars.current_total_seconds = 0.1;
 	vars.boss_killed = 0;
 	vars.has_beat_hades = false;
+	vars.totalSplits = 5;
+	vars.splitOffset = 0;
 }
 
 update
