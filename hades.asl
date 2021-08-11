@@ -24,6 +24,8 @@ startup
 	});
 
   settings.Add("multiWep", false, "Multi Weapon Run");
+  settings.Add("houseSplits", false, "Use House Splits");
+  settings.Add("splitOnBossKill", false, "Split on Boss Kills");
 }
 
 init
@@ -57,7 +59,20 @@ init
 	vars.current_map = "";
 	vars.old_total_seconds = 0.1;
 	vars.current_total_seconds = 0.1;
+	vars.boss_killed = 0;
 	vars.has_beat_hades = false;
+
+	// Setting house split offset
+	if (settings["multiWep"] && settings["houseSplits]) 
+	{
+		vars.totalSplits = 6;
+		vars.splitOffset = 1;
+	}
+	else 
+	{
+		vars.totalSplits = 5;
+		vars.splitOffset = 0;
+	}
 }
 
 update
@@ -75,8 +90,10 @@ update
 			if(block == IntPtr.Zero)
 				continue;
 			var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
-			if(block_name.ToString() == "HadesKillPresentation")
-				vars.has_beat_hades = true; // Run has finished!
+			if(block_name.ToString() == "HarpyKillPresentation")
+				vars.boss_killed++; // boss has been killed
+			else if (block_name.ToString() == "HadesKillPresentation")
+				vars.has_beat_hades = true;
 		}
 	}
 
@@ -156,35 +173,71 @@ start
 	if (vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds)
 	{
 		vars.split = 0;
-		vars.has_beat_hades = false;
+		vars.boss_killed = 0;
 		return true;
 	}
 }
 
 split
 {
-  // Credits: ellomenop
-  // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
-  if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split % 5 == 0)
-     ||
-     // 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
-     ((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split % 5 == 1)
-     ||
-     // 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
-     (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split % 5 == 2)
-     ||
-     // 4th Split if old map was the styx hub and new room is the dad fight
-     (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % 5 == 3)
-     ||
-     // 5th and final split if we have beat dad
-     (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % 5 == 4))
-    {
-      vars.split++;
+  // house splits (if setting selected)
+  if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomPreRun" && vars.split % vars.totalSplits == 0)
+  {
+	  return true;
+  }
+  // biome splits (boss kill vs room transition)
+  if (settings["splitOnBossKill"])
+  {
+	  // 1st split if in fury room and boss killed
+	  if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed == 1 && vars.split % vars.totalSplits == vars.splitOffset)
+	  	||
+		// 2nd split if in lernie room and hydra killed
+	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed == 1 && vvars.split % vars.totalSplits == 1 + vars.splitOffset)
+		||
+		// 3rd split if in heroes' arena and heroes are both killed 
+		(vars.current_map == "C_Boss01" && vars.boss_killed == 2 && vars.split % vars.totalSplits == 2 + vars.splitOffset)
+		||
+		// 4th split if old map was the styx hub and the new room is the dad fight
+		(vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3 + vars.splitOffset)
+		||
+		// 5th and final split if Hades has been killed
+		(vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4 + vars.splitOffset))
+		{
+			// increment splits, reset tracking variables
+			vars.split++;
+			vars.has_beat_hades = false;
+			vars.boss_killed = 0;
 
-      // Clear this flag so that its false for the next weapon in multi-weapon runs
-      vars.has_beat_hades = false;
-      return true;
-    }
+			return true;
+		}
+
+  } 
+  else 
+  {
+	// Credits: ellomenop
+	// 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
+	if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split % 5 == vars.split % vars.totalSplits == vars.splitOffset)
+		||
+		// 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
+		((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split % 5 == vars.split % vars.totalSplits == vars.splitOffset + 1)
+		||
+		// 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
+		(vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split % 5 == vars.split % vars.totalSplits == vars.splitOffset + 2)
+		||
+		// 4th Split if old map was the styx hub and new room is the dad fight
+		(vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % 5 == vars.split % vars.totalSplits == vars.splitOffset + 3)
+		||
+		// 5th and final split if we have beat dad
+		(vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % 5 == vars.split % vars.totalSplits == vars.splitOffset + 4))
+		{
+		vars.split++;
+
+		// Clear this flag so that its false for the next weapon in multi-weapon runs
+		vars.has_beat_hades = false;
+		vars.boss+killed = 0;
+		return true;
+		}
+  }
 }
 
 reset
@@ -197,6 +250,7 @@ reset
 		vars.time_split = "0:0.1".Split(':', '.');
 		vars.current_total_seconds = .1;
 		vars.has_beat_hades = false;
+		vars.boss_killed = 0;
 		return true;
 	}
 }
