@@ -73,15 +73,16 @@ update
 	if(last_block_count != vars.current_block_count)
 	{
 		IntPtr hash_table = ExtensionMethods.ReadPointer(game, vars.current_player + 0x40);
-		for(int i = 0; i < 2; i++)
+		for(int i = 0; i < vars.current_block_count; i++)
 		{
 			IntPtr block = ExtensionMethods.ReadPointer(game, hash_table + 0x8 * i);
 			if(block == IntPtr.Zero)
 				continue;
 			var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
 			var block_string = block_name.ToString();
+			print(block_string);
 
-			if (block_string == "HarpyKillPresentation" || block_string == "HydraKillPresentation" || block_string == "TheseusMinotaurKillPresentation")
+			if (block_string == "HarpyKillPresentation")
 			{
 				vars.boss_killed++; // boss has been killed
 			}
