@@ -2,6 +2,8 @@
 	Credits
 		Sebastien S. (SystemFailu.re) : Creating main script, reversing engine.
 		ellomenop : Doing splits, helping test & misc. bug fixes.
+		Museus: Routed splitting
+		cgull: House splits + splits on boss kill
 */
 
 state("Hades")
@@ -182,19 +184,24 @@ start
 
 split
 {
+  // Credits: Museus
+
+  // routed splitting (if setting selected), splits every room transition after start
+  if (settings["routed"] && !(vars.current_map == vars.old_map))
+  {
+	  return true;
+  }
+
+  // Credits: cgull
+  // resetting boss kill boolean, as sometimes it gets reset to true after splitting
   if (vars.boss_killed && vars.current_map != "A_Boss01" && vars.current_map != "A_Boss02" 
 	  && vars.current_map != "A_Boss03" && vars.current_map != "B_Boss01" && vars.current_map != "B_Boss02"
 	  && vars.current_map != "C_Boss01")
 	  {
 	  	vars.boss_killed = false;
 	  }
-  // house splits (if setting selected)
+  // multiwep house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
-  {
-	  return true;
-  }
-  // routed splitting (if setting selected)
-  if (settings["routed"] && !(vars.current_map == vars.old_map)
   {
 	  return true;
   }
