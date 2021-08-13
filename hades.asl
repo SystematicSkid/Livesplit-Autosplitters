@@ -145,9 +145,9 @@ update
   vars.time_split = vars.current_run_time.Split(':', '.');
   /* Convert the string time to singles */
   vars.current_total_seconds =
-      Convert.ToSingle(vars.time_split[0]) * 60 +
-      Convert.ToSingle(vars.time_split[1]) +
-      Convert.ToSingle(vars.time_split[2]) / 100;
+	(float)(Convert.ToInt32(vars.time_split[0])) * 60 +
+	(float)(Convert.ToInt32(vars.time_split[1])) +
+	(float)(Convert.ToInt32(vars.time_split[2])) / 100;
 }
 
 start
@@ -209,4 +209,10 @@ gameTime
   int ms = Convert.ToInt32(vars.time_split[2] + "0");
 
   return new TimeSpan(0, h, m, s, ms);
+}
+
+isLoading
+{
+	/* Nefarious! */
+	return !ExtensionMethods.ReadValue<bool>(game, vars.world);
 }
