@@ -75,10 +75,17 @@ update
 	for(int i = 0; i < 4; i++)
 	{
 		IntPtr block = ExtensionMethods.ReadPointer(game, hash_table + 0x8 * i);
+
 		if(block == IntPtr.Zero)
 			continue;
+
 		var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
-		var block_string = block_name.ToString();
+
+		var block_string = "";
+		
+		if (block_name != null)
+			block_string = block_name.ToString();
+
 		// print(i.ToString() + ": " + block_string);
 
 		if (block_string == "HarpyKillPresentation")
@@ -86,11 +93,13 @@ update
 			vars.boss_killed = true; // boss has been killed
 		}
 
-		if (block_string == "HadesKillPresentation") {
+		if (block_string == "HadesKillPresentation") 
+		{
 			vars.has_beat_hades = true;
 		}
 
-		if (block_string == "ExitToHadesPresentation") {
+		if (block_string == "ExitToHadesPresentation")
+		{
 			vars.exit_to_hades = true;
 		}
 	}
@@ -213,7 +222,7 @@ split
 		(vars.current_map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
 		||
 		// 4th split if old map was the styx hub and the new room is the dad fight
-		(vars.exit_to_hades && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3)
+		(vars.exit_to_hades && vars.current_map == "D_Hub" && vars.split % vars.totalSplits == 3)
 		||
 		// 5th and final split if Hades has been killed
 		(vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
