@@ -26,6 +26,8 @@ startup
   settings.Add("multiWep", false, "Multi Weapon Run");
   settings.Add("houseSplits", false, "Use House Splits", "multiWep");
   settings.Add("splitOnBossKill", false, "Split on Boss Kills");
+  settings.Add("routed", false, "Routed (per chamber)");
+
 }
 
 init
@@ -188,6 +190,11 @@ split
 	  }
   // house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
+  {
+	  return true;
+  }
+  // routed splitting (if setting selected)
+  if (settings["routed"] && !(vars.current_map == vars.old_map)
   {
 	  return true;
   }
