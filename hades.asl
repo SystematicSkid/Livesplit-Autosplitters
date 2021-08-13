@@ -59,38 +59,42 @@ init
 	vars.current_map = "";
 	vars.old_total_seconds = 0.1;
 	vars.current_total_seconds = 0.1;
-	vars.boss_killed = 0;
+	vars.boss_killed = false;
 	vars.has_beat_hades = false;
 	vars.totalSplits = 5;
+	vars.old_block_string = "";
 }
 
 update
 {
-	int last_block_count = vars.current_block_count;
+	// int last_block_count = vars.current_block_count;
 	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
 
-	/* Check if hash table size has changed */
-	if(last_block_count != vars.current_block_count)
-	{
+	// /* Check if hash table size has changed */
+	// if(last_block_count != vars.current_block_count)
+	// {
 		IntPtr hash_table = ExtensionMethods.ReadPointer(game, vars.current_player + 0x40);
-		for(int i = 0; i < vars.current_block_count; i++)
+		for(int i = 0; i < 4; i++)
 		{
 			IntPtr block = ExtensionMethods.ReadPointer(game, hash_table + 0x8 * i);
 			if(block == IntPtr.Zero)
 				continue;
 			var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
 			var block_string = block_name.ToString();
-			print(block_string);
+			// print(i.ToString() + ": " + block_string);
 
 			if (block_string == "HarpyKillPresentation")
 			{
-				vars.boss_killed++; // boss has been killed
+				vars.boss_killed = true; // boss has been killed
 			}
+
 			if (block_string == "HadesKillPresentation") {
 				vars.has_beat_hades = true;
 			}
-		}
-	}
+			vars.old_block_string = block_string;
+			}
+		// }
+	// }
 
 	/* Get our vector pointers, used to iterate through current screens */
 	if(vars.screen_manager != IntPtr.Zero)
@@ -169,13 +173,19 @@ start
 	{
 		vars.totalSplits = 5;
 		vars.split = 0;
-		vars.boss_killed = 0;
+		vars.boss_killed = false;
 		return true;
 	}
 }
 
 split
 {
+  if (vars.boss_killed && vars.current_map != "A_Boss01" && vars.current_map != "A_Boss02" 
+	  && vars.current_map != "A_Boss03" && vars.current_map != "B_Boss01" && vars.current_map != "B_Boss02"
+	  && vars.current_map != "C_Boss01")
+	  {
+	  	vars.boss_killed = false;
+	  }
   // house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
   {
@@ -185,13 +195,13 @@ split
   if (settings["splitOnBossKill"])
   {
 	  // 1st split if in fury room and boss killed
-	  if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed >= 1 && vars.split % vars.totalSplits == 0)
+	  if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed && vars.split % vars.totalSplits == 0)
 	  	||
 		// 2nd split if in lernie room and hydra killed
-	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed >= 1 && vars.split % vars.totalSplits == 1)
+	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed && vars.split % vars.totalSplits == 1)
 		||
 		// 3rd split if in heroes' arena and heroes are both killed 
-		(vars.current_map == "C_Boss01" && vars.boss_killed >= 2 && vars.split % vars.totalSplits == 2)
+		(vars.current_map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
 		||
 		// 4th split if old map was the styx hub and the new room is the dad fight
 		(vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3)
@@ -202,11 +212,13 @@ split
 			// increment splits, reset tracking variables
 			vars.split++;
 			vars.has_beat_hades = false;
-			vars.boss_killed = 0;
+			vars.boss_killed = false;
 			print("bosskillsplit");
 
 			return true;
 		}
+
+	
 
   } 
   else 
