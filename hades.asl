@@ -65,43 +65,38 @@ init
 	vars.current_total_seconds = 0.1;
 	vars.boss_killed = false;
 	vars.has_beat_hades = false;
+	vars.exit_to_hades = false;
 	vars.totalSplits = 5;
-	vars.old_block_string = "";
 }
 
 update
 {
-	// int last_block_count = vars.current_block_count;
-	vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
+	IntPtr hash_table = ExtensionMethods.ReadPointer(game, vars.current_player + 0x40);
+	for(int i = 0; i < 4; i++)
+	{
+		IntPtr block = ExtensionMethods.ReadPointer(game, hash_table + 0x8 * i);
+		if(block == IntPtr.Zero)
+			continue;
+		var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
+		var block_string = block_name.ToString();
+		// print(i.ToString() + ": " + block_string);
 
-	// /* Check if hash table size has changed */
-	// if(last_block_count != vars.current_block_count)
-	// {
-		IntPtr hash_table = ExtensionMethods.ReadPointer(game, vars.current_player + 0x40);
-		for(int i = 0; i < 4; i++)
+		if (block_string == "HarpyKillPresentation")
 		{
-			IntPtr block = ExtensionMethods.ReadPointer(game, hash_table + 0x8 * i);
-			if(block == IntPtr.Zero)
-				continue;
-			var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
-			var block_string = block_name.ToString();
-			// print(i.ToString() + ": " + block_string);
+			vars.boss_killed = true; // boss has been killed
+		}
 
-			if (block_string == "HarpyKillPresentation")
-			{
-				vars.boss_killed = true; // boss has been killed
-			}
+		if (block_string == "HadesKillPresentation") {
+			vars.has_beat_hades = true;
+		}
 
-			if (block_string == "HadesKillPresentation") {
-				vars.has_beat_hades = true;
-			}
-			vars.old_block_string = block_string;
-			}
-		// }
-	// }
+		if (block_string == "ExitToHadesPresentation") {
+			vars.exit_to_hades = true;
+		}
+	}
 
 	/* Get our vector pointers, used to iterate through current screens */
-	if(vars.screen_manager != IntPtr.Zero)
+    if(vars.screen_manager != IntPtr.Zero)
 	{
 		IntPtr screen_vector_begin = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x48);
 		IntPtr screen_vector_end = ExtensionMethods.ReadPointer(game, vars.screen_manager + 0x50);
@@ -178,6 +173,7 @@ start
 		vars.totalSplits = 5;
 		vars.split = 0;
 		vars.boss_killed = false;
+		vars.exit_to_hades = false;
 		return true;
 	}
 }
@@ -185,7 +181,6 @@ start
 split
 {
   // Credits: Museus
-
   // routed splitting (if setting selected), splits every room transition after start
   if (settings["routed"] && !(vars.current_map == vars.old_map))
   {
@@ -218,7 +213,7 @@ split
 		(vars.current_map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
 		||
 		// 4th split if old map was the styx hub and the new room is the dad fight
-		(vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3)
+		(vars.exit_to_hades && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3)
 		||
 		// 5th and final split if Hades has been killed
 		(vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
@@ -227,13 +222,9 @@ split
 			vars.split++;
 			vars.has_beat_hades = false;
 			vars.boss_killed = false;
-			print("bosskillsplit");
-
+			vars.exit_to_hades = false;
 			return true;
 		}
-
-	
-
   } 
   else 
   {
