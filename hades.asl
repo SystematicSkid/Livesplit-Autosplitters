@@ -86,18 +86,14 @@ update
 		if (block_name != null)
 			block_string = block_name.ToString();
 
-		// print(i.ToString() + ": " + block_string);
-
 		if (block_string == "HarpyKillPresentation")
 		{
 			vars.boss_killed = true; // boss has been killed
 		}
-
 		if (block_string == "HadesKillPresentation") 
 		{
 			vars.has_beat_hades = true;
 		}
-
 		if (block_string == "ExitToHadesPresentation")
 		{
 			vars.exit_to_hades = true;
