@@ -253,7 +253,7 @@ split
 
 		// Clear this flag so that its false for the next weapon in multi-weapon runs
 		vars.has_beat_hades = false;
-		vars.boss_killed = 0;
+		vars.boss_killed = false;
 		return true;
 		}
   }
@@ -269,7 +269,7 @@ reset
 		vars.time_split = "0:0.1".Split(':', '.');
 		vars.current_total_seconds = .1;
 		vars.has_beat_hades = false;
-		vars.boss_killed = 0;
+		vars.boss_killed = false;
 		return true;
 	}
 }
