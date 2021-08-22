@@ -2,7 +2,7 @@
 	Credits
 		Sebastien S. (SystemFailu.re) : Creating main script, reversing engine.
 		ellomenop : Doing splits, helping test & misc. bug fixes.
-		Museus: Routed splitting
+		Museus: Routed splitting, refactoring
 		cgull: House splits + splits on boss kill
 */
 
@@ -66,6 +66,7 @@ init
 	vars.boss_killed = false;
 	vars.has_beat_hades = false;
 	vars.exit_to_hades = false;
+	vars.still_in_arena = false;
 	vars.totalSplits = 5;
 }
 
@@ -82,21 +83,24 @@ update
 		var block_name = ExtensionMethods.ReadString(game, block, 32); // Guessing on size
 
 		var block_string = "";
-		
+
 		if (block_name != null)
 			block_string = block_name.ToString();
 
-		if (block_string == "HarpyKillPresentation")
+		if (block_string == "HarpyKillPresentation" && !(vars.current_map == "D_MiniBoss03") && !vars.still_in_arena)
 		{
 			vars.boss_killed = true; // boss has been killed
+			vars.still_in_arena = true;
 		}
-		if (block_string == "HadesKillPresentation") 
+		if (block_string == "HadesKillPresentation" && !vars.still_in_arena)
 		{
 			vars.has_beat_hades = true;
+			vars.still_in_arena = true;
 		}
-		if (block_string == "ExitToHadesPresentation")
+		if (block_string == "ExitToHadesPresentation" && !vars.still_in_arena)
 		{
 			vars.exit_to_hades = true;
+			vars.still_in_arena = true;
 		}
 	}
 
@@ -122,7 +126,7 @@ update
 			}
 		}
 	}
-	
+
 
 	/* Get our current run time */
 	if(vars.game_ui != IntPtr.Zero)
@@ -152,6 +156,12 @@ update
 			vars.current_map = ExtensionMethods.ReadString(game, map_data + 0x8, 0x10);
 			//print("Map: " + vars.current_map + ", Last:" + vars.old_map);
 		}
+	}
+
+	/* Once we leave arena, allow boss kill detection again */
+	if(vars.still_in_arena && !(vars.current_map == vars.old_map))
+	{
+		vars.still_in_arena = false;
 	}
 
 	/* Unused for now */
@@ -192,36 +202,16 @@ split
 	  return true;
   }
 
-  // Credits: cgull
-  // resetting boss kill boolean, as sometimes it gets reset to true after splitting
-  if (vars.boss_killed && vars.current_map != "A_Boss01" && vars.current_map != "A_Boss02" 
-	  && vars.current_map != "A_Boss03" && vars.current_map != "B_Boss01" && vars.current_map != "B_Boss02"
-	  && vars.current_map != "C_Boss01")
-	  {
-	  	vars.boss_killed = false;
-	  }
   // multiwep house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
   {
 	  return true;
   }
+
   // biome splits (boss kill vs room transition)
   if (settings["splitOnBossKill"])
   {
-	  // 1st split if in fury room and boss killed
-	  if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed && vars.split % vars.totalSplits == 0)
-	  	||
-		// 2nd split if in lernie room and hydra killed
-	    ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed && vars.split % vars.totalSplits == 1)
-		||
-		// 3rd split if in heroes' arena and heroes are both killed 
-		(vars.current_map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
-		||
-		// 4th split if old map was the styx hub and the new room is the dad fight
-		(vars.exit_to_hades && vars.current_map == "D_Hub" && vars.split % vars.totalSplits == 3)
-		||
-		// 5th and final split if Hades has been killed
-		(vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
+	  if (vars.boss_killed || vars.exit_to_hades || vars.has_beat_hades)
 		{
 			// increment splits, reset tracking variables
 			vars.split++;
@@ -230,8 +220,8 @@ split
 			vars.exit_to_hades = false;
 			return true;
 		}
-  } 
-  else 
+  }
+  else
   {
 	// Credits: ellomenop
 	// 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
@@ -270,6 +260,7 @@ reset
 		vars.current_total_seconds = .1;
 		vars.has_beat_hades = false;
 		vars.boss_killed = false;
+		vars.still_in_arena = false;
 		return true;
 	}
 }
