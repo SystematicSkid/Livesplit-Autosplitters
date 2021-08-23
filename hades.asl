@@ -60,6 +60,7 @@ init
 	/* Misc. vars */
 	vars.current_run_time = "0:0.1";
 	vars.current_map = "";
+	vars.old_map = "";
 	vars.old_total_seconds = 0.1;
 	vars.current_total_seconds = 0.1;
 	vars.boss_killed = false;
