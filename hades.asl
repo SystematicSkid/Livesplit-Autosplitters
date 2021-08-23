@@ -192,26 +192,25 @@ start
 
 split
 {
-  // Credits: Museus
+  var entered_new_room = !(vars.current_map == vars.old_map);
+  var in_postboss_room_or_hades_fight = vars.current_map == "A_PostBoss01" || vars.current_map == "B_PostBoss01" || vars.current_map == "C_PostBoss01" || vars.current_map == "D_Boss01";
+
   // routed splitting (if setting selected), splits every room transition after start
-  if (settings["routed"] && !(vars.current_map == vars.old_map))
+  if (settings["routed"] && entered_new_room)
   {
 	  return true;
   }
 
-  // multiwep house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds)
   {
-	  return true;
+    return true;
   }
 
   // biome splits (boss kill vs room transition)
   if (
-	(settings["splitOnBossKill"] && (vars.boss_killed || vars.exit_to_hades || vars.has_beat_hades))
-	|| (
-	  !(settings["splitOnBossKill"]) &&
-	  ((!(vars.current_map == vars.old_map) && (vars.current_map == "A_PostBoss01" || vars.current_map == "B_PostBoss01" || vars.current_map == "C_PostBoss01" || vars.current_map == "D_Boss01")) || vars.has_beat_hades)
-    )
+	(settings["splitOnBossKill"] && (vars.boss_killed || vars.exit_to_hades))
+	|| (!(settings["splitOnBossKill"]) && entered_new_room && in_postboss_room_or_hades_fight)
+	|| vars.has_beat_hades
   )
   {
 	// reset tracking variables
