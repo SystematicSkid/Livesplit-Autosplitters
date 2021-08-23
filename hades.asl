@@ -205,34 +205,19 @@ split
   }
 
   // biome splits (boss kill vs room transition)
-  if (settings["splitOnBossKill"])
+  if (
+	(settings["splitOnBossKill"] && (vars.boss_killed || vars.exit_to_hades || vars.has_beat_hades))
+	|| (
+	  !(settings["splitOnBossKill"]) &&
+	  ((!(vars.current_map == vars.old_map) && (vars.current_map == "A_PostBoss01" || vars.current_map == "B_PostBoss01" || vars.current_map == "C_PostBoss01" || vars.current_map == "D_Boss01")) || vars.has_beat_hades)
+    )
+  )
   {
-	  if (vars.boss_killed || vars.exit_to_hades || vars.has_beat_hades)
-		{
-			// reset tracking variables
-			vars.has_beat_hades = false;
-			vars.boss_killed = false;
-			vars.exit_to_hades = false;
-			return true;
-		}
-  }
-  else
-  {
-	// Credits: ellomenop
-	// 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
-	if (
-		(!(vars.current_map == vars.old_map) && (vars.current_map == "A_PostBoss01" || vars.current_map == "B_PostBoss01" || vars.current_map == "C_PostBoss01" || vars.current_map == "D_Boss01"))
-		|| vars.has_beat_hades
-	)
-	{
-		vars.split++;
-
-		// Clear this flag so that its false for the next weapon in multi-weapon runs
-		vars.has_beat_hades = false;
-		vars.boss_killed = false;
-		vars.exit_to_hades = false;
-		return true;
-	}
+	// reset tracking variables
+	vars.has_beat_hades = false;
+	vars.boss_killed = false;
+	vars.exit_to_hades = false;
+	return true;
   }
 }
 
