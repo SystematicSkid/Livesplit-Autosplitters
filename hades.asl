@@ -90,17 +90,14 @@ update
 
         if (block_string == "HarpyKillPresentation" && !(vars.current_map == "D_MiniBoss03") && !vars.still_in_arena) {
             vars.boss_killed = true; // boss has been killed
-            vars.still_in_arena = true;
         }
 
         if (block_string == "HadesKillPresentation" && !vars.still_in_arena) {
             vars.has_beat_hades = true;
-            vars.still_in_arena = true;
         }
 
         if (block_string == "ExitToHadesPresentation" && !vars.still_in_arena) {
             vars.exit_to_hades = true;
-            vars.still_in_arena = true;
         }
     }
 
@@ -205,6 +202,9 @@ split
         vars.has_beat_hades = false;
         vars.boss_killed = false;
         vars.exit_to_hades = false;
+
+        // Disable boss kill detection until we leave the boss arena
+        vars.still_in_arena = true;
 
         return true;
     }
