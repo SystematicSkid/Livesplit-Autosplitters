@@ -16,15 +16,6 @@ state("Hades")
 
 startup
 {
-    // Credits: Doom asl I found
-    vars.ReadOffset = (Func<Process, IntPtr, int, int, IntPtr>)((proc, ptr, offsetSize, remainingBytes) =>
-    {
-        byte[] offsetBytes;
-        if (ptr == IntPtr.Zero || !proc.ReadBytes(ptr, offsetSize, out offsetBytes))
-            return IntPtr.Zero;
-        return ptr + offsetSize + remainingBytes + BitConverter.ToInt32(offsetBytes, 0);
-    });
-
   settings.Add("multiWep", false, "Multi Weapon Run");
   settings.Add("houseSplits", false, "Use House Splits", "multiWep");
   settings.Add("splitOnBossKill", false, "Split on Boss Kills");
@@ -38,19 +29,25 @@ init
     Thread.Sleep(2000);
     /* Do our signature scanning */
     var engine = modules.FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s")); // DX = EngineWin64s.dll, VK = EngineWin64sv.dll
-    var app_sig_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
-    var world_sig_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
-    var playermanager_sig_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB ");
     var signature_scanner = new SignatureScanner(game, engine.BaseAddress, engine.ModuleMemorySize);
-    var app_sig_ptr = signature_scanner.Scan(app_sig_target);
-    var world_sig_ptr = signature_scanner.Scan(world_sig_target);
-    var playermanager_sig_ptr = signature_scanner.Scan(playermanager_sig_target);
-    var app_ptr_ref = vars.ReadOffset(game, app_sig_ptr, 4, 0);
-    var world_ptr_ref = vars.ReadOffset(game, world_sig_ptr, 4, 0);
-    var playermanager_ptr_ref = vars.ReadOffset(game, playermanager_sig_ptr, 4, 0);
-    vars.app = ExtensionMethods.ReadPointer(game, app_ptr_ref);
-    vars.world = ExtensionMethods.ReadPointer(game, world_ptr_ref); // Just dereference ptr
-    vars.playermanager = ExtensionMethods.ReadPointer(game, playermanager_ptr_ref);
+
+    var app_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
+    var world_signature_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
+    var playermanager_signature_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB");
+
+    var signature_targets = new [] {
+        app_signature_target,
+        world_signature_target,
+        playermanager_signature_target,
+    };
+
+    foreach (var target in signature_targets) {
+        target.OnFound = (process, _, pointer) => process.ReadPointer(pointer + 0x4 + process.ReadValue<int>(pointer));
+    }
+
+    vars.app = signature_scanner.Scan(app_signature_target);
+    vars.world = signature_scanner.Scan(world_signature_target);
+    vars.playermanager = signature_scanner.Scan(playermanager_signature_target);
 
     vars.screen_manager = ExtensionMethods.ReadPointer(game, vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
     vars.current_player = ExtensionMethods.ReadPointer(game, ExtensionMethods.ReadPointer(game, vars.playermanager + 0x18));
