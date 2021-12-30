@@ -48,10 +48,10 @@ init
     vars.world = signature_scanner.Scan(world_signature_target);
     vars.player_manager = signature_scanner.Scan(player_manager_signature_target);
 
-    vars.screen_manager = game.ReadPointer(vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
-    vars.current_player = game.ReadPointer(game.ReadPointer(vars.player_manager + 0x18));
+    vars.screen_manager = game.ReadPointer((IntPtr)vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
+    vars.current_player = game.ReadPointer(game.ReadPointer((IntPtr)vars.player_manager + 0x18));
 
-    // vars.current_block_count = game.ReadValue<int>(vars.current_player + 0x50);
+    // vars.current_block_count = game.ReadValue<int>((IntPtr)vars.current_player + 0x50);
 
     current.run_time = "0:0.1";
     current.map = "";
@@ -60,7 +60,7 @@ init
 
 update
 {
-    IntPtr hash_table = game.ReadPointer(vars.current_player + 0x40);
+    IntPtr hash_table = game.ReadPointer((IntPtr)vars.current_player + 0x40);
     for(int i = 0; i < 4; i++)
     {
         IntPtr block = game.ReadPointer(hash_table + 0x8 * i);
@@ -88,8 +88,8 @@ update
     /* Get our vector pointers, used to iterate through current screens */
     if (vars.screen_manager != IntPtr.Zero)
     {
-        IntPtr screen_vector_begin = game.ReadPointer(vars.screen_manager + 0x48);
-        IntPtr screen_vector_end = game.ReadPointer(vars.screen_manager + 0x50);
+        IntPtr screen_vector_begin = game.ReadPointer((IntPtr)vars.screen_manager + 0x48);
+        IntPtr screen_vector_end = game.ReadPointer((IntPtr)vars.screen_manager + 0x50);
 
         var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) >> 3;
 
@@ -103,7 +103,7 @@ update
             IntPtr screen_vtable = game.ReadPointer(current_screen); // Deref to get vtable
             IntPtr get_type_method = game.ReadPointer(screen_vtable + 0x68); // Unlikely to change
 
-            int screen_type = game.ReadValue<int>(get_type_method + 0x1);
+            int screen_type = game.ReadValue<int>((IntPtr)get_type_method + 0x1);
 
             if ((screen_type & 0x7) == 7) // We have found the InGameUI screen.
                 vars.game_ui = current_screen;
@@ -114,7 +114,7 @@ update
     /* Get our current run time */
     if (vars.game_ui != IntPtr.Zero)
     {
-        IntPtr runtime_component = game.ReadPointer(vars.game_ui + 0x518); // Possible to change if they adjust the UI class
+        IntPtr runtime_component = game.ReadPointer((IntPtr)vars.game_ui + 0x518); // Possible to change if they adjust the UI class
         if (runtime_component != IntPtr.Zero)
         {
             /* This might break if the run goes over 99 minutes T_T */
@@ -127,16 +127,18 @@ update
     /* Get our current map name */
     if(vars.world != IntPtr.Zero)
     {
-        IntPtr map_data = game.ReadPointer(vars.world + 0xA0); // Unlikely to change.
+        IntPtr map_data = game.ReadPointer((IntPtr)vars.world + 0xA0); // Unlikely to change.
         if(map_data != IntPtr.Zero)
             current.map = game.ReadString(map_data + 0x8, 0x10);
     }
 
-    /* Unused for now */
-    IntPtr player_unit = game.ReadPointer(vars.current_player + 0x18);
+    /*
+    Unused for now
+    IntPtr player_unit = game.ReadPointer((IntPtr)vars.current_player + 0x18);
+
     if(player_unit != IntPtr.Zero)
-        // 48 8B 91 ? ? ? ? 88 42 08
-        IntPtr unit_input = game.ReadPointer(player_unit + 0x560);
+        IntPtr unit_input = game.ReadPointer(player_unit + 0x560); // 48 8B 91 ? ? ? ? 88 42 08
+    */
 
     vars.time_split = current.run_time.Split(':', '.');
     /* Convert the string time to singles */
@@ -232,5 +234,5 @@ gameTime
 isLoading
 {
     /* Nefarious! */
-    return !game.ReadValue<bool>(vars.world);
+    return !game.ReadValue<bool>((IntPtr)vars.world);
 }
