@@ -16,11 +16,10 @@ state("Hades")
 
 startup
 {
-  settings.Add("multiWep", false, "Multi Weapon Run");
-  settings.Add("houseSplits", false, "Use House Splits", "multiWep");
-  settings.Add("splitOnBossKill", false, "Split on Boss Kills");
-  settings.Add("routed", false, "Routed (per chamber)");
-
+    settings.Add("multiWep", false, "Multi Weapon Run");
+    settings.Add("houseSplits", false, "Use House Splits", "multiWep");
+    settings.Add("splitOnBossKill", false, "Split on Boss Kills");
+    settings.Add("routed", false, "Routed (per chamber)");
 }
 
 init
@@ -139,110 +138,78 @@ update
         // 48 8B 91 ? ? ? ? 88 42 08
         IntPtr unit_input = game.ReadPointer(player_unit + 0x560);
 
-  vars.time_split = current.run_time.Split(':', '.');
-  /* Convert the string time to singles */
-  current.total_seconds =
-    (float)(Convert.ToInt32(vars.time_split[0])) * 60 +
-    (float)(Convert.ToInt32(vars.time_split[1])) +
-    (float)(Convert.ToInt32(vars.time_split[2])) / 100;
-}
+    vars.time_split = current.run_time.Split(':', '.');
+    /* Convert the string time to singles */
+    current.total_seconds =
+        (float)(Convert.ToInt32(vars.time_split[0])) * 60 +
+        (float)(Convert.ToInt32(vars.time_split[1])) +
+        (float)(Convert.ToInt32(vars.time_split[2])) / 100;
+    }
 
 onStart
 {
-    vars.split = 0;
-    vars.totalSplits = 5;
-
     current.map = "";
     current.total_seconds = 0.1;
 
     vars.boss_killed = false;
     vars.has_beat_hades = false;
     vars.exit_to_hades = false;
+
+    vars.still_in_arena = false;
 }
 
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
     if (current.map == "RoomOpening" && old.total_seconds > current.total_seconds)
-    {
         return true;
-    }
 }
 
 onSplit
 {
-    vars.split++;
-
     vars.boss_killed = false;
     vars.has_beat_hades = false;
     vars.exit_to_hades = false;
+
+    // Disable boss kill detection until we leave the boss arena
+    vars.still_in_arena = true;
 }
 
 split
 {
-  // Credits: Museus
-  // routed splitting (if setting selected), splits every room transition after start
-  if (settings["routed"] && !(current.map == old.map))
-      return true;
+    // Split on Hades Kill
+    if (vars.has_beat_hades)
+        return true;
 
+    // Split on Boss Kill
+    if (settings["splitOnBossKill"] && (vars.boss_killed || vars.exit_to_hades))
+        return true;
 
-  // multiwep house splits (if setting selected)
-  if (settings["multiWep"] && settings["houseSplits"] && current.map == "RoomOpening" && old.total_seconds > current.total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
-      return true;
+    var starting_new_run = current.map == "RoomOpening" && old.total_seconds > current.total_seconds;
+    // Split on run start if House Splits are enabled
+    if (settings["multiWep"] && settings["houseSplits"] && starting_new_run)
+        return true;
 
-  // biome splits (boss kill vs room transition)
-  if (settings["splitOnBossKill"])
-  {
-      // 1st split if in fury room and boss killed
-      if (((current.map == "A_Boss01" || current.map == "A_Boss02" || current.map == "A_Boss03") && vars.boss_killed && vars.split % vars.totalSplits == 0)
-        ||
-        // 2nd split if in lernie room and hydra killed
-        ((current.map == "B_Boss01" || current.map == "B_Boss02") && vars.boss_killed && vars.split % vars.totalSplits == 1)
-        ||
-        // 3rd split if in heroes' arena and heroes are both killed
-        (current.map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
-        ||
-        // 4th split if old map was the styx hub and the new room is the dad fight
-        (vars.exit_to_hades && current.map == "D_Hub" && vars.split % vars.totalSplits == 3)
-        ||
-        // 5th and final split if Hades has been killed
-        (current.map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
-        {
-            return true;
-        }
-  }
-  else
-  {
-    // Credits: ellomenop
-    // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
-    if (((old.map == "A_Boss01" || old.map == "A_Boss02" || old.map == "A_Boss03") && current.map == "A_PostBoss01" && vars.split % vars.totalSplits == 0)
-        ||
-        // 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
-        ((old.map == "B_Boss01" || old.map == "B_Boss02") && current.map == "B_PostBoss01" && vars.split % vars.totalSplits == 1)
-        ||
-        // 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
-        (old.map == "C_Boss01" && current.map == "C_PostBoss01" && vars.split % vars.totalSplits == 2)
-        ||
-        // 4th Split if old map was the styx hub and new room is the dad fight
-        (old.map == "D_Hub" && current.map == "D_Boss01" && vars.split % vars.totalSplits == 3)
-        ||
-        // 5th and final split if we have beat dad
-        (current.map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits ==  4))
-        {
-            return true;
-        }
-  }
+    var entered_new_room = current.map != old.map;
+    // Split every chamber if Routed is enabled
+    if (settings["routed"] && entered_new_room)
+        return true;
+
+    var in_postboss_room_or_hades_fight = current.map == "A_PostBoss01" || current.map == "B_PostBoss01" || current.map == "C_PostBoss01" || current.map == "D_Boss01";
+    // Split on room transition
+    if (!settings["splitOnBossKill"] && entered_new_room && in_postboss_room_or_hades_fight)
+        return true;
 }
 
 onReset
 {
-    vars.split = 0;
     vars.time_split = "0:0.1".Split(':', '.');
-
     current.total_seconds = 0f;
 
     vars.has_beat_hades = false;
     vars.boss_killed = false;
+
+    vars.still_in_arena = false;
 }
 
 reset
@@ -254,12 +221,12 @@ reset
 
 gameTime
 {
-  int h = Convert.ToInt32(vars.time_split[0]) / 60;
-  int m = Convert.ToInt32(vars.time_split[0]) % 60;
-  int s = Convert.ToInt32(vars.time_split[1]);
-  int ms = Convert.ToInt32(vars.time_split[2] + "0");
+    int h = Convert.ToInt32(vars.time_split[0]) / 60;
+    int m = Convert.ToInt32(vars.time_split[0]) % 60;
+    int s = Convert.ToInt32(vars.time_split[1]);
+    int ms = Convert.ToInt32(vars.time_split[2] + "0");
 
-  return new TimeSpan(0, h, m, s, ms);
+    return new TimeSpan(0, h, m, s, ms);
 }
 
 isLoading
