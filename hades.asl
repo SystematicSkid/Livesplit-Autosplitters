@@ -54,16 +54,9 @@ init
 
     vars.current_block_count = ExtensionMethods.ReadValue<int>(game, vars.current_player + 0x50);
 
-    /* Misc. vars */
-    vars.split = 0;
     vars.current_run_time = "0:0.1";
     vars.current_map = "";
-    vars.old_total_seconds = 0.1;
-    vars.current_total_seconds = 0.1;
-    vars.boss_killed = false;
-    vars.has_beat_hades = false;
-    vars.exit_to_hades = false;
-    vars.totalSplits = 5;
+    vars.current_total_seconds = 0f;
 }
 
 update
@@ -167,17 +160,38 @@ update
     (float)(Convert.ToInt32(vars.time_split[2])) / 100;
 }
 
+onStart
+{
+    vars.split = 0;
+    vars.totalSplits = 5;
+
+    vars.old_map = "";
+    vars.current_map = "";
+
+    vars.old_total_seconds = 0.1;
+    vars.current_total_seconds = 0.1;
+
+    vars.boss_killed = false;
+    vars.has_beat_hades = false;
+    vars.exit_to_hades = false;
+}
+
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
     if (vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds)
     {
-        vars.totalSplits = 5;
-        vars.split = 0;
-        vars.boss_killed = false;
-        vars.exit_to_hades = false;
         return true;
     }
+}
+
+onSplit
+{
+    vars.split++;
+
+    vars.boss_killed = false;
+    vars.has_beat_hades = false;
+    vars.exit_to_hades = false;
 }
 
 split
@@ -189,14 +203,6 @@ split
       return true;
   }
 
-  // Credits: cgull
-  // resetting boss kill boolean, as sometimes it gets reset to true after splitting
-  if (vars.boss_killed && vars.current_map != "A_Boss01" && vars.current_map != "A_Boss02" 
-      && vars.current_map != "A_Boss03" && vars.current_map != "B_Boss01" && vars.current_map != "B_Boss02"
-      && vars.current_map != "C_Boss01")
-      {
-        vars.boss_killed = false;
-      }
   // multiwep house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
   {
@@ -220,15 +226,10 @@ split
         // 5th and final split if Hades has been killed
         (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
         {
-            // increment splits, reset tracking variables
-            vars.split++;
-            vars.has_beat_hades = false;
-            vars.boss_killed = false;
-            vars.exit_to_hades = false;
             return true;
         }
-  } 
-  else 
+  }
+  else
   {
     // Credits: ellomenop
     // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
@@ -246,14 +247,20 @@ split
         // 5th and final split if we have beat dad
         (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits ==  4))
         {
-        vars.split++;
-
-        // Clear this flag so that its false for the next weapon in multi-weapon runs
-        vars.has_beat_hades = false;
-        vars.boss_killed = false;
-        return true;
+            return true;
         }
   }
+}
+
+onReset
+{
+    vars.split = 0;
+    vars.time_split = "0:0.1".Split(':', '.');
+
+    vars.current_total_seconds = 0f;
+
+    vars.has_beat_hades = false;
+    vars.boss_killed = false;
 }
 
 reset
@@ -261,12 +268,6 @@ reset
   // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
     if(vars.current_map == "RoomPreRun" && !settings["multiWep"])
     {
-        /* Reset all of our dynamic variables. */
-        vars.split = 0;
-        vars.time_split = "0:0.1".Split(':', '.');
-        vars.current_total_seconds = .1;
-        vars.has_beat_hades = false;
-        vars.boss_killed = false;
         return true;
     }
 }
