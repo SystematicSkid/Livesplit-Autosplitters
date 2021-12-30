@@ -54,9 +54,9 @@ init
 
     // vars.current_block_count = game.ReadValue<int>(vars.current_player + 0x50);
 
-    vars.current_run_time = "0:0.1";
-    vars.current_map = "";
-    vars.current_total_seconds = 0f;
+    current.run_time = "0:0.1";
+    current.map = "";
+    current.total_seconds = 0f;
 }
 
 update
@@ -119,35 +119,29 @@ update
         if (runtime_component != IntPtr.Zero)
         {
             /* This might break if the run goes over 99 minutes T_T */
-            vars.old_run_time = vars.current_run_time;
-            vars.current_run_time = game.ReadString(game.ReadPointer(runtime_component + 0xA98), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
-            if (vars.current_run_time == "PauseScr")
-                vars.current_run_time = "0:0.1";
+            current.run_time = game.ReadString(game.ReadPointer(runtime_component + 0xA98), 0x8); // 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
+            if (current.run_time == "PauseScr")
+                current.run_time = "0:0.1";
         }
     }
 
     /* Get our current map name */
     if(vars.world != IntPtr.Zero)
     {
-        vars.is_running = game.ReadValue<bool>(vars.world); // 0x0
         IntPtr map_data = game.ReadPointer(vars.world + 0xA0); // Unlikely to change.
         if(map_data != IntPtr.Zero)
-        {
-            vars.old_map = vars.current_map;
-            vars.current_map = game.ReadString(map_data + 0x8, 0x10);
-            //print("Map: " + vars.current_map + ", Last:" + vars.old_map);
-        }
+            current.map = game.ReadString(map_data + 0x8, 0x10);
     }
 
     /* Unused for now */
     IntPtr player_unit = game.ReadPointer(vars.current_player + 0x18);
     if(player_unit != IntPtr.Zero)
-        IntPtr unit_input = game.ReadPointer(player_unit + 0x560); // Could change -> 48 8B 91 ? ? ? ? 88 42 08
+        // 48 8B 91 ? ? ? ? 88 42 08
+        IntPtr unit_input = game.ReadPointer(player_unit + 0x560);
 
-  vars.old_total_seconds = vars.current_total_seconds;
-  vars.time_split = vars.current_run_time.Split(':', '.');
+  vars.time_split = current.run_time.Split(':', '.');
   /* Convert the string time to singles */
-  vars.current_total_seconds =
+  current.total_seconds =
     (float)(Convert.ToInt32(vars.time_split[0])) * 60 +
     (float)(Convert.ToInt32(vars.time_split[1])) +
     (float)(Convert.ToInt32(vars.time_split[2])) / 100;
@@ -158,11 +152,8 @@ onStart
     vars.split = 0;
     vars.totalSplits = 5;
 
-    vars.old_map = "";
-    vars.current_map = "";
-
-    vars.old_total_seconds = 0.1;
-    vars.current_total_seconds = 0.1;
+    current.map = "";
+    current.total_seconds = 0.1;
 
     vars.boss_killed = false;
     vars.has_beat_hades = false;
@@ -172,7 +163,7 @@ onStart
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
-    if (vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds)
+    if (current.map == "RoomOpening" && old.total_seconds > current.total_seconds)
     {
         return true;
     }
@@ -191,31 +182,31 @@ split
 {
   // Credits: Museus
   // routed splitting (if setting selected), splits every room transition after start
-  if (settings["routed"] && !(vars.current_map == vars.old_map))
+  if (settings["routed"] && !(current.map == old.map))
       return true;
 
 
   // multiwep house splits (if setting selected)
-  if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
+  if (settings["multiWep"] && settings["houseSplits"] && current.map == "RoomOpening" && old.total_seconds > current.total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
       return true;
 
   // biome splits (boss kill vs room transition)
   if (settings["splitOnBossKill"])
   {
       // 1st split if in fury room and boss killed
-      if (((vars.current_map == "A_Boss01" || vars.current_map == "A_Boss02" || vars.current_map == "A_Boss03") && vars.boss_killed && vars.split % vars.totalSplits == 0)
+      if (((current.map == "A_Boss01" || current.map == "A_Boss02" || current.map == "A_Boss03") && vars.boss_killed && vars.split % vars.totalSplits == 0)
         ||
         // 2nd split if in lernie room and hydra killed
-        ((vars.current_map == "B_Boss01" || vars.current_map == "B_Boss02") && vars.boss_killed && vars.split % vars.totalSplits == 1)
+        ((current.map == "B_Boss01" || current.map == "B_Boss02") && vars.boss_killed && vars.split % vars.totalSplits == 1)
         ||
-        // 3rd split if in heroes' arena and heroes are both killed 
-        (vars.current_map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
+        // 3rd split if in heroes' arena and heroes are both killed
+        (current.map == "C_Boss01" && vars.boss_killed && vars.split % vars.totalSplits == 2)
         ||
         // 4th split if old map was the styx hub and the new room is the dad fight
-        (vars.exit_to_hades && vars.current_map == "D_Hub" && vars.split % vars.totalSplits == 3)
+        (vars.exit_to_hades && current.map == "D_Hub" && vars.split % vars.totalSplits == 3)
         ||
         // 5th and final split if Hades has been killed
-        (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
+        (current.map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits == 4))
         {
             return true;
         }
@@ -224,19 +215,19 @@ split
   {
     // Credits: ellomenop
     // 1st Split if old map was one of the furies fights and new room is the Tartarus -> Asphodel mid biome room
-    if (((vars.old_map == "A_Boss01" || vars.old_map == "A_Boss02" || vars.old_map == "A_Boss03") && vars.current_map == "A_PostBoss01" && vars.split % vars.totalSplits == 0)
+    if (((old.map == "A_Boss01" || old.map == "A_Boss02" || old.map == "A_Boss03") && current.map == "A_PostBoss01" && vars.split % vars.totalSplits == 0)
         ||
         // 2nd Split if old map was lernie (normal or EM2) and new room is the Asphodel -> Elysium mid biome room
-        ((vars.old_map == "B_Boss01" || vars.old_map == "B_Boss02") && vars.current_map == "B_PostBoss01" && vars.split % vars.totalSplits == 1)
+        ((old.map == "B_Boss01" || old.map == "B_Boss02") && current.map == "B_PostBoss01" && vars.split % vars.totalSplits == 1)
         ||
         // 3rd Split if old map was heroes and new room is the Elysium -> Styx mid biome room
-        (vars.old_map == "C_Boss01" && vars.current_map == "C_PostBoss01" && vars.split % vars.totalSplits == 2)
+        (old.map == "C_Boss01" && current.map == "C_PostBoss01" && vars.split % vars.totalSplits == 2)
         ||
         // 4th Split if old map was the styx hub and new room is the dad fight
-        (vars.old_map == "D_Hub" && vars.current_map == "D_Boss01" && vars.split % vars.totalSplits == 3)
+        (old.map == "D_Hub" && current.map == "D_Boss01" && vars.split % vars.totalSplits == 3)
         ||
         // 5th and final split if we have beat dad
-        (vars.current_map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits ==  4))
+        (current.map == "D_Boss01" && vars.has_beat_hades && vars.split % vars.totalSplits ==  4))
         {
             return true;
         }
@@ -248,7 +239,7 @@ onReset
     vars.split = 0;
     vars.time_split = "0:0.1".Split(':', '.');
 
-    vars.current_total_seconds = 0f;
+    current.total_seconds = 0f;
 
     vars.has_beat_hades = false;
     vars.boss_killed = false;
@@ -257,7 +248,7 @@ onReset
 reset
 {
   // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
-    if(vars.current_map == "RoomPreRun" && !settings["multiWep"])
+    if(current.map == "RoomPreRun" && !settings["multiWep"])
         return true;
 }
 
