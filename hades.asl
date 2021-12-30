@@ -33,12 +33,12 @@ init
 
     var app_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
     var world_signature_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
-    var playermanager_signature_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB");
+    var player_manager_signature_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB");
 
     var signature_targets = new [] {
         app_signature_target,
         world_signature_target,
-        playermanager_signature_target,
+        player_manager_signature_target,
     };
 
     foreach (var target in signature_targets) {
@@ -47,12 +47,12 @@ init
 
     vars.app = signature_scanner.Scan(app_signature_target);
     vars.world = signature_scanner.Scan(world_signature_target);
-    vars.playermanager = signature_scanner.Scan(playermanager_signature_target);
+    vars.player_manager = signature_scanner.Scan(player_manager_signature_target);
 
     vars.screen_manager = game.ReadPointer(vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
-    vars.current_player = game.ReadPointer(game.ReadPointer(vars.playermanager + 0x18));
+    vars.current_player = game.ReadPointer(game.ReadPointer(vars.player_manager + 0x18));
 
-    vars.current_block_count = game.ReadValue<int>(vars.current_player + 0x50);
+    // vars.current_block_count = game.ReadValue<int>(vars.current_player + 0x50);
 
     vars.current_run_time = "0:0.1";
     vars.current_map = "";
@@ -65,69 +65,64 @@ update
     for(int i = 0; i < 4; i++)
     {
         IntPtr block = game.ReadPointer(hash_table + 0x8 * i);
-
         if(block == IntPtr.Zero)
             continue;
 
         var block_name = game.ReadString(block, 32); // Guessing on size
+        if (block_name == null)
+            continue;
 
-        var block_string = "";
-        
-        if (block_name != null)
-            block_string = block_name.ToString();
+        var block_string = block_name.ToString();
 
+        // All bosses use same block string on kill
         if (block_string == "HarpyKillPresentation")
-        {
-            vars.boss_killed = true; // boss has been killed
-        }
-        if (block_string == "HadesKillPresentation") 
-        {
+            vars.boss_killed = true;
+
+        // Except Hades, that's a different one
+        if (block_string == "HadesKillPresentation")
             vars.has_beat_hades = true;
-        }
+
         if (block_string == "ExitToHadesPresentation")
-        {
             vars.exit_to_hades = true;
-        }
     }
 
     /* Get our vector pointers, used to iterate through current screens */
-    if(vars.screen_manager != IntPtr.Zero)
+    if (vars.screen_manager != IntPtr.Zero)
     {
         IntPtr screen_vector_begin = game.ReadPointer(vars.screen_manager + 0x48);
         IntPtr screen_vector_end = game.ReadPointer(vars.screen_manager + 0x50);
+
         var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) >> 3;
-        for(int i = 0; i < num_screens; i++)
+
+        // Maybe only loop once to find game_ui, not sure if pointer is destructed anytime.
+        for (int i = 0; i < num_screens; i++)
         {
             IntPtr current_screen = game.ReadPointer(screen_vector_begin + 0x8 * i);
-            if(current_screen == IntPtr.Zero)
+            if (current_screen == IntPtr.Zero)
                 continue;
+
             IntPtr screen_vtable = game.ReadPointer(current_screen); // Deref to get vtable
             IntPtr get_type_method = game.ReadPointer(screen_vtable + 0x68); // Unlikely to change
+
             int screen_type = game.ReadValue<int>(get_type_method + 0x1);
-            if((screen_type & 0x7) == 7)
-            {
-                // We have found the InGameUI screen.
+
+            if ((screen_type & 0x7) == 7) // We have found the InGameUI screen.
                 vars.game_ui = current_screen;
-                // Possibly stop loop once this has been found? Not sure if this pointer is destructed anytime.
-            }
         }
     }
-    
+
 
     /* Get our current run time */
-    if(vars.game_ui != IntPtr.Zero)
+    if (vars.game_ui != IntPtr.Zero)
     {
         IntPtr runtime_component = game.ReadPointer(vars.game_ui + 0x518); // Possible to change if they adjust the UI class
-        if(runtime_component != IntPtr.Zero)
+        if (runtime_component != IntPtr.Zero)
         {
             /* This might break if the run goes over 99 minutes T_T */
             vars.old_run_time = vars.current_run_time;
             vars.current_run_time = game.ReadString(game.ReadPointer(runtime_component + 0xA98), 0x8); // Can possibly change. -> 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
-            if(vars.current_run_time == "PauseScr")
-            {
+            if (vars.current_run_time == "PauseScr")
                 vars.current_run_time = "0:0.1";
-            }
-            //print("Time: " + vars.current_run_time + ", Last: " + vars.old_run_time);
         }
     }
 
@@ -147,9 +142,7 @@ update
     /* Unused for now */
     IntPtr player_unit = game.ReadPointer(vars.current_player + 0x18);
     if(player_unit != IntPtr.Zero)
-    {
         IntPtr unit_input = game.ReadPointer(player_unit + 0x560); // Could change -> 48 8B 91 ? ? ? ? 88 42 08
-    }
 
   vars.old_total_seconds = vars.current_total_seconds;
   vars.time_split = vars.current_run_time.Split(':', '.');
@@ -199,15 +192,13 @@ split
   // Credits: Museus
   // routed splitting (if setting selected), splits every room transition after start
   if (settings["routed"] && !(vars.current_map == vars.old_map))
-  {
       return true;
-  }
+
 
   // multiwep house splits (if setting selected)
   if (settings["multiWep"] && settings["houseSplits"] && vars.current_map == "RoomOpening" && vars.old_total_seconds > vars.current_total_seconds && vars.split % vars.totalSplits == 0 && vars.split > 0)
-  {
       return true;
-  }
+
   // biome splits (boss kill vs room transition)
   if (settings["splitOnBossKill"])
   {
@@ -267,9 +258,7 @@ reset
 {
   // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
     if(vars.current_map == "RoomPreRun" && !settings["multiWep"])
-    {
         return true;
-    }
 }
 
 gameTime
