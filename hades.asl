@@ -232,6 +232,10 @@ gameTime
 
 isLoading
 {
-    /* Nefarious! */
-    return !game.ReadValue<bool>((IntPtr)vars.world);
+    /*
+    Because we just override the gameTime constantly with in-game timer, we
+    don't need a fancy load sensor. For a Loadless RTA setting, this will need
+    to be actually evaluated, but for now just pretend we are always loading.
+    */
+    return true;
 }
