@@ -71,17 +71,15 @@ update
         if (block_name == null)
             continue;
 
-        var block_string = block_name.ToString();
-
         // All bosses use same block string on kill
-        if (block_string == "HarpyKillPresentation")
+        if (block_name == "HarpyKillPresentation")
             vars.boss_killed = true;
 
         // Except Hades, that's a different one
-        if (block_string == "HadesKillPresentation")
+        if (block_name == "HadesKillPresentation")
             vars.has_beat_hades = true;
 
-        if (block_string == "ExitToHadesPresentation")
+        if (block_name == "ExitToHadesPresentation")
             vars.exit_to_hades = true;
     }
 
