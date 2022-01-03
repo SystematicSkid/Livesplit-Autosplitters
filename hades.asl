@@ -101,7 +101,7 @@ update
             IntPtr screen_vtable = game.ReadPointer(current_screen); // Deref to get vtable
             IntPtr get_type_method = game.ReadPointer(screen_vtable + 0x68); // Unlikely to change
 
-            int screen_type = game.ReadValue<int>((IntPtr)get_type_method + 0x1);
+            int screen_type = game.ReadValue<int>(get_type_method + 0x1);
 
             if ((screen_type & 0x7) == 7) // We have found the InGameUI screen.
                 vars.game_ui = current_screen;
