@@ -44,12 +44,12 @@ init
         target.OnFound = (process, _, pointer) => process.ReadPointer(pointer + 0x4 + process.ReadValue<int>(pointer));
     }
 
-    vars.app = signature_scanner.Scan(app_signature_target);
+    IntPtr app = signature_scanner.Scan(app_signature_target);
     vars.world = signature_scanner.Scan(world_signature_target);
-    vars.player_manager = signature_scanner.Scan(player_manager_signature_target);
+    IntPtr player_manager = signature_scanner.Scan(player_manager_signature_target);
 
-    vars.screen_manager = game.ReadPointer((IntPtr)vars.app + 0x3B0); // This might change, but unlikely. We can add signature scanning for this offset if it does. -> F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
-    vars.current_player = game.ReadPointer(game.ReadPointer((IntPtr)vars.player_manager + 0x18));
+    vars.screen_manager = game.ReadPointer(app + 0x3B0); // F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
+    vars.current_player = game.ReadPointer(game.ReadPointer(player_manager + 0x18));
 
     // vars.current_block_count = game.ReadValue<int>((IntPtr)vars.current_player + 0x50);
 
