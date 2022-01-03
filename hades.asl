@@ -89,7 +89,8 @@ update
         IntPtr screen_vector_begin = game.ReadPointer((IntPtr)vars.screen_manager + 0x48);
         IntPtr screen_vector_end = game.ReadPointer((IntPtr)vars.screen_manager + 0x50);
 
-        var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) >> 3;
+        // 64-bit IntPtr are 8 bytes each, so divide by 8 to get number of screens
+        var num_screens = (screen_vector_end.ToInt64() - screen_vector_begin.ToInt64()) / 8;
 
         // Maybe only loop once to find game_ui, not sure if pointer is destructed anytime.
         for (int i = 0; i < num_screens; i++)
