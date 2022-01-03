@@ -50,6 +50,7 @@ init
 
     vars.screen_manager = game.ReadPointer(app + 0x3B0); // F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
     vars.current_player = game.ReadPointer(game.ReadPointer(player_manager + 0x18));
+    vars.game_ui = IntPtr.Zero;
 
     // vars.current_block_count = game.ReadValue<int>((IntPtr)vars.current_player + 0x50);
 
@@ -83,7 +84,8 @@ update
             vars.exit_to_hades = true;
     }
 
-    /* Get our vector pointers, used to iterate through current screens */
+
+    // Get the array of screen IntPtrs and iterate to find InGameUI screen
     if (vars.screen_manager != IntPtr.Zero)
     {
         IntPtr screen_vector_begin = game.ReadPointer((IntPtr)vars.screen_manager + 0x48);
@@ -104,8 +106,11 @@ update
 
             int screen_type = game.ReadValue<int>(get_type_method + 0x1);
 
-            if ((screen_type & 0x7) == 7) // We have found the InGameUI screen.
+            // InGameUI is screen type 7
+            if ((screen_type & 0x7) == 7) {
                 vars.game_ui = current_screen;
+                break;
+            }
         }
     }
 
