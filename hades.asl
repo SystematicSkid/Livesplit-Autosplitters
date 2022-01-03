@@ -141,9 +141,9 @@ update
     vars.time_split = current.run_time.Split(':', '.');
     /* Convert the string time to singles */
     current.total_seconds =
-        (float)(Convert.ToInt32(vars.time_split[0])) * 60 +
-        (float)(Convert.ToInt32(vars.time_split[1])) +
-        (float)(Convert.ToInt32(vars.time_split[2])) / 100;
+        int.Parse(vars.time_split[0]) * 60 +
+        int.Parse(vars.time_split[1]) +
+        float.Parse(vars.time_split[2]) / 100;
     }
 
 onStart
@@ -221,10 +221,10 @@ reset
 
 gameTime
 {
-    int h = Convert.ToInt32(vars.time_split[0]) / 60;
-    int m = Convert.ToInt32(vars.time_split[0]) % 60;
-    int s = Convert.ToInt32(vars.time_split[1]);
-    int ms = Convert.ToInt32(vars.time_split[2] + "0");
+    int h = int.Parse(vars.time_split[0]) / 60;
+    int m = int.Parse(vars.time_split[0]) % 60;
+    int s = int.Parse(vars.time_split[1]);
+    int ms = int.Parse(vars.time_split[2] + "0");
 
     return new TimeSpan(0, h, m, s, ms);
 }
