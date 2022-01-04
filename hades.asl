@@ -21,6 +21,7 @@ startup
     settings.Add("multiWep", false, "Multi Weapon Run");
     settings.Add("houseSplits", false, "Use House Splits", "multiWep");
     settings.Add("splitOnBossKill", false, "Split on Boss Kills");
+    settings.Add("midbiome", false, "Split when exiting mid-biome");
     settings.Add("routed", false, "Routed (per chamber)");
 }
 
@@ -273,6 +274,17 @@ split
         if(in_postboss_room_or_hades_fight)
         {
             vars.Log("Splitting for chamber transition");
+            return true;
+        }
+    }
+
+    // Split when leaving midbiome
+    if (settings["midbiome"] && entered_new_room)
+    {
+        var left_postboss_room_or_hades_fight = old.map == "A_PostBoss01" || old.map == "B_PostBoss01" || old.map == "C_PostBoss01" || old.map == "D_Boss01";
+        if(left_postboss_room_or_hades_fight)
+        {
+            vars.Log("Splitting for leaving midbiome");
             return true;
         }
     }
