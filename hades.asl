@@ -24,44 +24,79 @@ startup
 
 init
 {
-    /* Kind of hacky, this is used since it may take a second for the game to load our engine module */
-    Thread.Sleep(2000);
-    /* Do our signature scanning */
-    var engine = modules.FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s")); // DX = EngineWin64s.dll, VK = EngineWin64sv.dll
-    var signature_scanner = new SignatureScanner(game, engine.BaseAddress, engine.ModuleMemorySize);
 
-    var app_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
-    var world_signature_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
-    var player_manager_signature_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB");
+    vars.InitComplete = false;
+    vars.CancelSource = new CancellationTokenSource();
 
-    var signature_targets = new [] {
-        app_signature_target,
-        world_signature_target,
-        player_manager_signature_target,
-    };
+    System.Threading.Tasks.Task.Run(async () =>
+    {
+        task_start: try {
+            while (true)
+            {
+                // DX = EngineWin64s.dll, VK = EngineWin64sv.dll
+                // Have to use game.ModulesWow64Safe() because modules variable doesn't update inside Tasks
+                var engine = game.ModulesWow64Safe().FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s"));
+                if (engine == null){
+                    await System.Threading.Tasks.Task.Delay(1000, vars.CancelSource.Token);
+                    continue;
+                }
 
-    foreach (var target in signature_targets) {
-        target.OnFound = (process, _, pointer) => process.ReadPointer(pointer + 0x4 + process.ReadValue<int>(pointer));
-    }
+                var signature_scanner = new SignatureScanner(game, engine.BaseAddress, engine.ModuleMemorySize);
 
-    IntPtr app = signature_scanner.Scan(app_signature_target);
-    vars.world = signature_scanner.Scan(world_signature_target);
-    IntPtr player_manager = signature_scanner.Scan(player_manager_signature_target);
+                /* Signatures */
+                var app_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 74 0A"); // rip = 7
+                var world_signature_target = new SigScanTarget(3, "48 89 05 ?? ?? ?? ?? 83 78 0C 00 7E 40");
+                var player_manager_signature_target = new SigScanTarget(3, "4C 8B 05 ?? ?? ?? ?? 48 8B CB");
 
-    vars.screen_manager = game.ReadPointer(app + 0x3B0); // F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
-    vars.current_player = game.ReadPointer(game.ReadPointer(player_manager + 0x18));
-    vars.game_ui = IntPtr.Zero;
+                var signature_targets = new [] {
+                    app_signature_target,
+                    world_signature_target,
+                    player_manager_signature_target,
+                };
 
-    // vars.current_block_count = game.ReadValue<int>((IntPtr)vars.current_player + 0x50);
+                foreach (var target in signature_targets) {
+                    target.OnFound = (process, _, pointer) => process.ReadPointer(pointer + 0x4 + process.ReadValue<int>(pointer));
+                }
+
+                IntPtr app = signature_scanner.Scan(app_signature_target);
+                vars.world = signature_scanner.Scan(world_signature_target);
+                IntPtr player_manager = signature_scanner.Scan(player_manager_signature_target);
+
+                vars.screen_manager = game.ReadPointer(app + 0x3B0); // F3 44 0F 11 40 ? 49 8B 8F ? ? ? ?
+                vars.current_player = game.ReadPointer(game.ReadPointer(player_manager + 0x18));
+                // vars.current_block_count = game.ReadValue<int>((IntPtr)vars.current_player + 0x50);
+
+                vars.InitComplete = true;
+                break;
+            }
+        }
+        catch (ArgumentException) {
+            // Hopefully will be fixed by https://github.com/LiveSplit/LiveSplit/pull/2203
+            goto task_start;
+        }
+        catch (Exception ex) {
+            print("Task abort.\n" + ex);
+        }
+    });
 
     current.run_time = "0:0.1";
     current.map = "";
     current.total_seconds = 0f;
+
+    vars.time_split = current.run_time.Split(':', '.');
+    vars.has_beat_hades = false;
+    vars.boss_killed = false;
+    vars.still_in_arena = false;
+
+    vars.game_ui = IntPtr.Zero;
 }
 
 update
 {
-    IntPtr hash_table = game.ReadPointer((IntPtr)vars.current_player + 0x40);
+    if (!(vars.InitComplete))
+        return false;
+
+    IntPtr hash_table = game.ReadPointer((IntPtr) vars.current_player + 0x40);
     for(int i = 0; i < 4; i++)
     {
         IntPtr block = game.ReadPointer(hash_table + 0x8 * i);
@@ -167,7 +202,7 @@ onStart
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
-    if (current.map == "RoomOpening" && old.total_seconds > current.total_seconds)
+    if (current.map == "RoomOpening" && (old.total_seconds > current.total_seconds || old.total_seconds == null))
         return true;
 }
 
@@ -243,4 +278,15 @@ isLoading
     to be actually evaluated, but for now just pretend we are always loading.
     */
     return true;
+}
+
+exit
+{
+    vars.CancelSource.Cancel();
+    vars.InitComplete = false;
+}
+
+shutdown
+{
+    vars.CancelSource.Cancel();
 }
