@@ -20,6 +20,7 @@ startup
 
     settings.Add("multiWep", false, "Multi Weapon Run");
     settings.Add("houseSplits", false, "Use House Splits", "multiWep");
+    settings.Add("enterBossArena", false, "Split when entering boss arena");
     settings.Add("splitOnBossKill", false, "Split on Boss Kills");
     settings.Add("midbiome", false, "Split when exiting mid-biome");
     settings.Add("routed", false, "Routed (per chamber)");
@@ -288,6 +289,23 @@ split
             return true;
         }
     }
+
+    // Split on entering boss arena
+    if (settings["enterBossArena"] && entered_new_room)
+    {
+        var in_boss_arena = (
+            current.map == "A_Boss01" || current.map == "A_Boss02" ||
+            current.map == "A_Boss03" || current.map == "B_Boss01" ||
+            current.map == "B_Boss02" || current.map == "C_Boss01"
+        );
+
+        if(in_boss_arena)
+        {
+            vars.Log("Splitting for entering boss arena");
+            return true;
+        }
+    }
+
 }
 
 onReset
