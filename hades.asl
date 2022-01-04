@@ -226,7 +226,7 @@ split
         return true;
 
     // Split on Boss Kill
-    if (settings["splitOnBossKill"] && (vars.boss_killed || vars.exit_to_hades))
+    if (settings["splitOnBossKill"] && !vars.still_in_arena && (vars.boss_killed || vars.exit_to_hades))
         return true;
 
     var starting_new_run = current.map == "RoomOpening" && old.total_seconds > current.total_seconds;
