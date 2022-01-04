@@ -265,12 +265,16 @@ split
         return true;
     }
 
-    var in_postboss_room_or_hades_fight = current.map == "A_PostBoss01" || current.map == "B_PostBoss01" || current.map == "C_PostBoss01" || current.map == "D_Boss01";
+
     // Split on room transition
-    if (!settings["splitOnBossKill"] && entered_new_room && in_postboss_room_or_hades_fight)
+    if (!settings["splitOnBossKill"] && entered_new_room)
     {
-        vars.Log("Splitting for chamber transition");
-        return true;
+        var in_postboss_room_or_hades_fight = current.map == "A_PostBoss01" || current.map == "B_PostBoss01" || current.map == "C_PostBoss01" || current.map == "D_Boss01";
+        if(in_postboss_room_or_hades_fight)
+        {
+            vars.Log("Splitting for chamber transition");
+            return true;
+        }
     }
 }
 
