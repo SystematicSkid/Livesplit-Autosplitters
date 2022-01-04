@@ -16,6 +16,8 @@ state("Hades")
 
 startup
 {
+    vars.Log = (Action<object>)((output) => print("[Hades ASL] " + output));
+
     settings.Add("multiWep", false, "Multi Weapon Run");
     settings.Add("houseSplits", false, "Use House Splits", "multiWep");
     settings.Add("splitOnBossKill", false, "Split on Boss Kills");
@@ -37,9 +39,11 @@ init
                 // Have to use game.ModulesWow64Safe() because modules variable doesn't update inside Tasks
                 var engine = game.ModulesWow64Safe().FirstOrDefault(x => x.ModuleName.StartsWith("EngineWin64s"));
                 if (engine == null){
+                    vars.Log("Engine not loaded yet, trying again.");
                     await System.Threading.Tasks.Task.Delay(1000, vars.CancelSource.Token);
                     continue;
                 }
+                vars.Log("Found engine!");
 
                 var signature_scanner = new SignatureScanner(game, engine.BaseAddress, engine.ModuleMemorySize);
 
@@ -86,6 +90,7 @@ init
     vars.time_split = current.run_time.Split(':', '.');
     vars.has_beat_hades = false;
     vars.boss_killed = false;
+
     vars.still_in_arena = false;
 
     vars.game_ui = IntPtr.Zero;
@@ -109,14 +114,23 @@ update
 
         // All bosses use same block string on kill
         if (block_name == "HarpyKillPresentation")
+        {
+            vars.Log("Detected boss kill");
             vars.boss_killed = true;
+        }
 
         // Except Hades, that's a different one
         if (block_name == "HadesKillPresentation")
+        {
+            vars.Log("Detected Hades kill");
             vars.has_beat_hades = true;
+        }
 
         if (block_name == "ExitToHadesPresentation")
+        {
+            vars.Log("Detected Sack handoff");
             vars.exit_to_hades = true;
+        }
     }
 
 
@@ -223,31 +237,47 @@ split
 {
     // Split on Hades Kill
     if (vars.has_beat_hades)
+    {
+        vars.Log("Splitting for Hades kill");
         return true;
+    }
 
     // Split on Boss Kill
     if (settings["splitOnBossKill"] && !vars.still_in_arena && (vars.boss_killed || vars.exit_to_hades))
+    {
+        vars.Log("(splitOnBossKill) Splitting for Sack handoff or boss kill");
         return true;
+    }
 
     var starting_new_run = current.map == "RoomOpening" && old.total_seconds > current.total_seconds;
     // Split on run start if House Splits are enabled
     if (settings["multiWep"] && settings["houseSplits"] && starting_new_run)
+    {
+        vars.Log("(Multiwep, House Splits) Splitting for house split");
         return true;
+    }
 
     var entered_new_room = current.map != old.map;
     // Split every chamber if Routed is enabled
     if (settings["routed"] && entered_new_room)
+    {
+        vars.Log("(Routed) Splitting for chamber transition");
         return true;
+    }
 
     var in_postboss_room_or_hades_fight = current.map == "A_PostBoss01" || current.map == "B_PostBoss01" || current.map == "C_PostBoss01" || current.map == "D_Boss01";
     // Split on room transition
     if (!settings["splitOnBossKill"] && entered_new_room && in_postboss_room_or_hades_fight)
+    {
+        vars.Log("Splitting for chamber transition");
         return true;
+    }
 }
 
 onReset
 {
     vars.time_split = "0:0.1".Split(':', '.');
+
     current.total_seconds = 0f;
 
     vars.has_beat_hades = false;
