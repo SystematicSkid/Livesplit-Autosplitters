@@ -237,6 +237,8 @@ onSplit
 
 split
 {
+    var entered_new_room = current.map != old.map;
+
     // Split on Hades Kill
     if (vars.has_beat_hades)
     {
@@ -251,15 +253,19 @@ split
         return true;
     }
 
-    var starting_new_run = current.map == "RoomOpening" && old.total_seconds > current.total_seconds;
     // Split on run start if House Splits are enabled
-    if (settings["multiWep"] && settings["houseSplits"] && starting_new_run)
+    if (settings["multiWep"] && settings["houseSplits"])
     {
-        vars.Log("(Multiwep, House Splits) Splitting for house split");
-        return true;
+        if ( // starting a new run
+            current.map == "RoomOpening" &&
+            (old.total_seconds > current.total_seconds || old.total_seconds == null)
+        )
+        {
+            vars.Log("(Multiwep, House Splits) Splitting for house split");
+            return true;
+        }
     }
 
-    var entered_new_room = current.map != old.map;
     // Split every chamber if Routed is enabled
     if (settings["routed"] && entered_new_room)
     {
@@ -271,8 +277,10 @@ split
     // Split on room transition
     if (!settings["splitOnBossKill"] && entered_new_room)
     {
-        var in_postboss_room_or_hades_fight = current.map == "A_PostBoss01" || current.map == "B_PostBoss01" || current.map == "C_PostBoss01" || current.map == "D_Boss01";
-        if(in_postboss_room_or_hades_fight)
+        if ( // in post-boss room or hades fight
+            current.map == "A_PostBoss01" || current.map == "B_PostBoss01" ||
+            current.map == "C_PostBoss01" || current.map == "D_Boss01"
+        )
         {
             vars.Log("Splitting for chamber transition");
             return true;
@@ -282,8 +290,11 @@ split
     // Split when leaving midbiome
     if (settings["midbiome"] && entered_new_room)
     {
-        var left_postboss_room_or_hades_fight = old.map == "A_PostBoss01" || old.map == "B_PostBoss01" || old.map == "C_PostBoss01" || old.map == "D_Boss01";
-        if(left_postboss_room_or_hades_fight)
+        if ( // left post-boss room
+            old.map == "A_PostBoss01" ||
+            old.map == "B_PostBoss01" ||
+            old.map == "C_PostBoss01"
+        )
         {
             vars.Log("Splitting for leaving midbiome");
             return true;
@@ -293,19 +304,16 @@ split
     // Split on entering boss arena
     if (settings["enterBossArena"] && entered_new_room)
     {
-        var in_boss_arena = (
+        if ( // in boss arena
             current.map == "A_Boss01" || current.map == "A_Boss02" ||
             current.map == "A_Boss03" || current.map == "B_Boss01" ||
             current.map == "B_Boss02" || current.map == "C_Boss01"
-        );
-
-        if(in_boss_arena)
+        )
         {
             vars.Log("Splitting for entering boss arena");
             return true;
         }
     }
-
 }
 
 onReset
