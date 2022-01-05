@@ -1,8 +1,8 @@
 /*
     Credits
         Sebastien S. (SystemFailu.re) : Creating main script, reversing engine.
-        ellomenop : Doing splits, helping test & misc. bug fixes.
-        Museus: Routed splitting
+        ellomenop : Doing original splits, helping test & misc. bug fixes.
+        Museus: Routed, midbiome, enter boss arena, overhaul of logic and sig scanning
         cgull: House splits + splits on boss kill
 */
 
