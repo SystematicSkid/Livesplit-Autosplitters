@@ -17,6 +17,7 @@ state("Hades")
 startup
 {
     vars.Log = (Action<object>)((output) => print("[Hades ASL] " + output));
+    vars.InitComplete = false;
 
     settings.Add("multiWep", false, "Multi Weapon Run");
     settings.Add("houseSplits", false, "Use House Splits", "multiWep");
@@ -28,7 +29,6 @@ startup
 
 init
 {
-
     vars.InitComplete = false;
     vars.CancelSource = new CancellationTokenSource();
 
@@ -87,11 +87,14 @@ init
 
     current.run_time = "0:0.1";
     current.map = "";
-    current.total_seconds = 0f;
+
+    current.total_seconds = 0.5f;
+    old.total_seconds = 0.5f;
 
     vars.time_split = current.run_time.Split(':', '.');
     vars.has_beat_hades = false;
     vars.boss_killed = false;
+    vars.exit_to_hades = false;
 
     vars.still_in_arena = false;
 
@@ -175,7 +178,7 @@ update
             /* This might break if the run goes over 99 minutes T_T */
             current.run_time = game.ReadString(game.ReadPointer(runtime_component + 0xA98), 0x8); // 48 8D 8E ? ? ? ? 48 8D 05 ? ? ? ? 4C 8B C0 66 0F 1F 44 00
             if (current.run_time == "PauseScr")
-                current.run_time = "0:0.1";
+                current.run_time = "0:0.10";
         }
     }
 
@@ -204,13 +207,10 @@ update
         int.Parse(vars.time_split[0]) * 60 +
         int.Parse(vars.time_split[1]) +
         float.Parse(vars.time_split[2]) / 100;
-    }
+}
 
 onStart
 {
-    current.map = "";
-    current.total_seconds = 0.1;
-
     vars.boss_killed = false;
     vars.has_beat_hades = false;
     vars.exit_to_hades = false;
@@ -221,7 +221,7 @@ onStart
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
-    if (current.map == "RoomOpening" && (old.total_seconds > current.total_seconds || old.total_seconds == null))
+    if (current.map == "RoomOpening" && old.total_seconds > current.total_seconds)
         return true;
 }
 
@@ -230,15 +230,10 @@ onSplit
     vars.boss_killed = false;
     vars.has_beat_hades = false;
     vars.exit_to_hades = false;
-
-    // Disable boss kill detection until we leave the boss arena
-    vars.still_in_arena = true;
 }
 
 split
 {
-    var entered_new_room = current.map != old.map;
-
     // Split on Hades Kill
     if (vars.has_beat_hades)
     {
@@ -246,10 +241,16 @@ split
         return true;
     }
 
+    var entered_new_room = current.map != old.map;
+
     // Split on Boss Kill
     if (settings["splitOnBossKill"] && !vars.still_in_arena && (vars.boss_killed || vars.exit_to_hades))
     {
         vars.Log("(splitOnBossKill) Splitting for Sack handoff or boss kill");
+
+        // Disable boss kill detection until we leave the boss arena
+        vars.still_in_arena = true;
+
         return true;
     }
 
@@ -258,7 +259,7 @@ split
     {
         if ( // starting a new run
             current.map == "RoomOpening" &&
-            (old.total_seconds > current.total_seconds || old.total_seconds == null)
+            (old.total_seconds > current.total_seconds)
         )
         {
             vars.Log("(Multiwep, House Splits) Splitting for house split");
@@ -319,8 +320,8 @@ split
 onReset
 {
     vars.time_split = "0:0.1".Split(':', '.');
-
-    current.total_seconds = 0f;
+    current.total_seconds = 0.5f;
+    old.total_seconds = 0.5f;
 
     vars.has_beat_hades = false;
     vars.boss_killed = false;
@@ -331,18 +332,13 @@ onReset
 reset
 {
   // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
-    if(current.map == "RoomPreRun" && !settings["multiWep"])
+    if(!settings["multiWep"] && current.map == "RoomPreRun")
         return true;
 }
 
 gameTime
 {
-    int h = int.Parse(vars.time_split[0]) / 60;
-    int m = int.Parse(vars.time_split[0]) % 60;
-    int s = int.Parse(vars.time_split[1]);
-    int ms = int.Parse(vars.time_split[2] + "0");
-
-    return new TimeSpan(0, h, m, s, ms);
+    return TimeSpan.FromSeconds(current.total_seconds);
 }
 
 isLoading
