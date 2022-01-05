@@ -189,8 +189,10 @@ update
         if(map_data != IntPtr.Zero)
             current.map = game.ReadString(map_data + 0x8, 0x10);
             if (vars.still_in_arena && current.map != old.map)
+            {
                 vars.still_in_arena = false;
-
+                vars.boss_killed = false;
+            }
     }
 
     /*
