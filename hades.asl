@@ -75,13 +75,15 @@ init
                 vars.InitComplete = true;
                 break;
             }
+
+            vars.CancelSource.Cancel();
         }
         catch (ArgumentException) {
             // Hopefully will be fixed by https://github.com/LiveSplit/LiveSplit/pull/2203
             goto task_start;
         }
         catch (Exception ex) {
-            print("Task abort.\n" + ex);
+            vars.Log("Task abort.\n" + ex);
         }
     });
 
