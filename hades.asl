@@ -192,6 +192,8 @@ update
             {
                 vars.still_in_arena = false;
                 vars.boss_killed = false;
+                vars.has_beat_hades = false;
+                vars.exit_to_hades = false;
             }
     }
 
@@ -237,9 +239,13 @@ onSplit
 split
 {
     // Split on Hades Kill
-    if (vars.has_beat_hades)
+    if (!vars.still_in_arena && vars.has_beat_hades)
     {
         vars.Log("Splitting for Hades kill");
+
+        // Disable boss kill detection until we leave the boss arena
+        vars.still_in_arena = true;
+
         return true;
     }
 
