@@ -119,8 +119,8 @@ update
         if (block_name == null)
             continue;
 
-        // All bosses use same block string on kill
-        if (block_name == "HarpyKillPresentation")
+        // All bosses use same block string on kill, ignore Tiny Vermin
+        if (block_name == "HarpyKillPresentation" && !(current.map == "D_MiniBoss03"))
         {
             vars.Log("Detected boss kill");
             vars.boss_killed = true;
