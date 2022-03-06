@@ -31,6 +31,7 @@ init
 {
     vars.InitComplete = false;
     vars.CancelSource = new CancellationTokenSource();
+    vars.quick_restart_mod = false;
 
     System.Threading.Tasks.Task.Run(async () =>
     {
@@ -137,6 +138,12 @@ update
         {
             vars.Log("Detected Sack handoff");
             vars.exit_to_hades = true;
+        }
+
+        if (block_name == "QuickRestart" )
+        {
+            vars.Log("Detected QuickRestart!");
+            vars.quick_restart_mod = true;
         }
     }
 
@@ -337,12 +344,16 @@ onReset
     vars.boss_killed = false;
 
     vars.still_in_arena = false;
+    vars.quick_restart_mod = false;
 }
 
 reset
 {
   // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
     if(!settings["multiWep"] && current.map == "RoomPreRun")
+        return true;
+
+    if(vars.quick_restart_mod)
         return true;
 }
 
