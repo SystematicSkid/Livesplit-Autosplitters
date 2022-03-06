@@ -23,6 +23,7 @@ startup
     settings.Add("houseSplits", false, "Use House Splits", "multiWep");
     settings.Add("enterBossArena", false, "Split when entering boss arena");
     settings.Add("splitOnBossKill", false, "Split on Boss Kills");
+    settings.Add("loyaltyCard", false, "Split on Loyalty Card");
     settings.Add("midbiome", false, "Split when exiting mid-biome");
     settings.Add("routed", false, "Routed (per chamber)");
 }
@@ -98,6 +99,7 @@ init
     vars.has_beat_hades = false;
     vars.boss_killed = false;
     vars.exit_to_hades = false;
+    vars.loyalty_card_pickup = false;
 
     vars.still_in_arena = false;
 
@@ -145,6 +147,13 @@ update
             vars.Log("Detected QuickRestart!");
             vars.quick_restart_mod = true;
         }
+
+        if (block_name == "LeaveCharonFight")
+        {
+            vars.Log("Detected Loyalty Card pickup");
+            vars.loyalty_card_pickup = true;
+        }
+
     }
 
 
@@ -332,6 +341,17 @@ split
             return true;
         }
     }
+
+    // Split on Loyalty Card pickup
+    if (settings["loyaltyCard"] && vars.loyalty_card_pickup && !vars.still_in_arena)
+    {
+        vars.Log("Splitting for Loyalty Card pickup");
+
+        // Disable detection until we leave the boss arena
+        vars.still_in_arena = true;
+
+        return true;
+    }
 }
 
 onReset
@@ -341,6 +361,7 @@ onReset
     old.total_seconds = 0.5f;
 
     vars.has_beat_hades = false;
+    vars.loyalty_card_pickup = false;
     vars.boss_killed = false;
 
     vars.still_in_arena = false;
