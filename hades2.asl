@@ -111,7 +111,7 @@ update
     if (!(vars.InitComplete))
         return false;
 
-    IntPtr hash_table = game.ReadPointer((IntPtr) vars.current_player + 0x40);
+    IntPtr hash_table = game.ReadPointer((IntPtr) vars.current_player + 0x48);
     for(int i = 0; i < 4; i++)
     {
         IntPtr block = game.ReadPointer(hash_table + 0x8 * i);
