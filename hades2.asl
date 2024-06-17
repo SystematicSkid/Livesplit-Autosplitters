@@ -174,7 +174,7 @@ update
                 continue;
 
             IntPtr screen_vtable = game.ReadPointer(current_screen); // Deref to get vtable
-            IntPtr get_type_method = game.ReadPointer(screen_vtable + 0x58); // Unlikely to change
+            IntPtr get_type_method = game.ReadPointer(screen_vtable + 0x50); // Unlikely to change <--- I lied
 
             int screen_type = game.ReadValue<int>(get_type_method + 0x1);
 
@@ -190,7 +190,7 @@ update
     /* Get our current run time */
     if (vars.game_ui != IntPtr.Zero)
     {
-        IntPtr runtime_component = game.ReadPointer((IntPtr)vars.game_ui + 0x2F0); // Possible to change if they adjust the UI class
+        IntPtr runtime_component = game.ReadPointer((IntPtr)vars.game_ui + 0x2F8); // Possible to change if they adjust the UI class
         if (runtime_component != IntPtr.Zero)
         {
             /* This might break if the run goes over 99 minutes T_T */
