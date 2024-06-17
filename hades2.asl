@@ -54,7 +54,7 @@ init
                 /* Signatures */
                 var app_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 48 8B B8 ?? ?? ?? ?? 48 8B 4F"); // rip = 7
                 var world_signature_target = new SigScanTarget(3, "48 8B 05 ?? ?? ?? ?? 48 8D 8E ?? ?? ?? ?? 33 D2");
-                var player_manager_signature_target = new SigScanTarget(3, "48 8B 0D ?? ?? ?? ?? 48 8D 3D");
+                var player_manager_signature_target = new SigScanTarget(3, "48 8B 15 ?? ?? ?? ?? 48 FF C3 E9 ?? ?? ?? ?? 0F 29 74 24");
 
                 var signature_targets = new [] {
                     app_signature_target,
@@ -205,7 +205,7 @@ update
     {
         IntPtr map_data = game.ReadPointer((IntPtr)vars.world + 0x90); // 0x70 + 0x20
         if(map_data != IntPtr.Zero)
-            current.map = game.ReadString(map_data + 0x8, 0x10);
+            current.map = game.ReadString(map_data, 0x10);
             if (vars.still_in_arena && current.map != old.map)
             {
                 vars.still_in_arena = false;
