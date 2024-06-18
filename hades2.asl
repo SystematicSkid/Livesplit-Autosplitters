@@ -3,10 +3,11 @@
         Sebastien S. (SystemFailu.re) : Creating main script, reversing engine.
         ellomenop : Doing original splits, helping test & misc. bug fixes.
         Museus: Routed, midbiome, enter boss arena, overhaul of logic and sig scanning
-        cgull: House splits + splits on boss kill
+        cgull: House splits + splits on boss kill, revamp for Hades II.
+        iDeathHD: solved the 23 length string crisis of 2024
 */
 
-state("Hades")
+state("Hades2")
 {
     /*
         There's nothing here because I don't want to use static instance addresses..
@@ -20,11 +21,10 @@ startup
     vars.InitComplete = false;
 
     settings.Add("multiWep", false, "Multi Weapon Run");
-    settings.Add("houseSplits", false, "Use House Splits", "multiWep");
+    settings.Add("houseSplits", false, "Use Crossroads Splits", "multiWep");
     settings.Add("enterBossArena", false, "Split when entering boss arena");
     settings.Add("splitOnBossKill", false, "Split on Boss Kills");
-    settings.Add("loyaltyCard", false, "Split on Loyalty Card");
-    settings.Add("midbiome", false, "Split when exiting mid-biome");
+    settings.Add("midbiome", false, "Split when exiting inter-biome");
     settings.Add("routed", false, "Routed (per chamber)");
 }
 
@@ -96,10 +96,10 @@ init
     old.total_seconds = 0.5f;
 
     vars.time_split = current.run_time.Split(':', '.');
-    vars.has_beat_hades = false;
+    vars.has_beat_chronos = false;
     vars.boss_killed = false;
-    vars.exit_to_hades = false;
-    vars.loyalty_card_pickup = false;
+    vars.exit_to_chronos = false;
+    vars.chronos_phased = false;
 
     vars.still_in_arena = false;
 
@@ -111,6 +111,7 @@ update
     if (!(vars.InitComplete))
         return false;
 
+
     IntPtr hash_table = game.ReadPointer((IntPtr) vars.current_player + 0x48);
     for(int i = 0; i < 4; i++)
     {
@@ -118,40 +119,52 @@ update
         if(block == IntPtr.Zero)
             continue;
 
-        var block_name = game.ReadString(block, 32); // Guessing on size
-        if (block_name == null)
-            continue;
+        string block_name = "";
 
-        // All bosses use same block string on kill, ignore Tiny Vermin
-        if (block_name == "HarpyKillPresentation" && !(current.map == "D_MiniBoss03"))
+        bool isSSOString = (game.ReadValue<byte>(block + 23) & 0x80) == 0;
+        if (isSSOString)
+        {
+            block_name = game.ReadString(block, 24);
+
+            if (block_name == null)
+                continue;
+
+            //vars.Log("sso block_name: " + block_name);
+        }
+        else
+        {
+            block = game.ReadPointer(block);
+            block_name = game.ReadString(block, 128);
+            
+            if (block_name == null)
+                continue;
+
+            //vars.Log("block_name: " + block_name);
+        }
+
+        // ignore Uh-Oh!/King Vermin & Charybdis & Chronos (because of time offset)
+        if ((block_name == "GenericBossKillPresentation" || block_name == "HecateKillPresentation")
+            && !(current.map == "G_MiniBoss02" || current.map == "O_MiniBoss01" || current.map == "I_Boss01"))
         {
             vars.Log("Detected boss kill");
             vars.boss_killed = true;
+
         }
 
-        // Except Hades, that's a different one
-        if (block_name == "HadesKillPresentation")
+        if (block_name == "ChronosPhaseTransition")
         {
-            vars.Log("Detected Hades kill");
-            vars.has_beat_hades = true;
+            vars.chronos_phased = true;
+        }
+        if (block_name == "PlayTextLines" && vars.chronos_phased)
+        {
+            vars.Log("Detected Chronos Kill");
+            vars.has_beat_chronos = true;
         }
 
-        if (block_name == "ExitToHadesPresentation")
+        if (block_name == "LeaveRoomIPreBossPresentation")
         {
-            vars.Log("Detected Sack handoff");
-            vars.exit_to_hades = true;
-        }
-
-        if (block_name == "QuickRestart" )
-        {
-            vars.Log("Detected QuickRestart!");
-            vars.quick_restart_mod = true;
-        }
-
-        if (block_name == "LeaveCharonFight")
-        {
-            vars.Log("Detected Loyalty Card pickup");
-            vars.loyalty_card_pickup = true;
+            vars.Log("Detected Sand Dive");
+            vars.exit_to_chronos = true;
         }
 
     }
@@ -206,12 +219,15 @@ update
         IntPtr map_data = game.ReadPointer((IntPtr)vars.world + 0x90); // 0x70 + 0x20
         if(map_data != IntPtr.Zero)
             current.map = game.ReadString(map_data, 0x10);
+            if (current.map != old.map){
+                vars.Log(current.map);
+            }
             if (vars.still_in_arena && current.map != old.map)
             {
                 vars.still_in_arena = false;
                 vars.boss_killed = false;
-                vars.has_beat_hades = false;
-                vars.exit_to_hades = false;
+                vars.has_beat_chronos = false;
+                vars.exit_to_chronos = false;
             }
     }
 
@@ -235,23 +251,25 @@ onStart
 start
 {
     // Start the timer if in the first room and the old timer is greater than the new (memory address holds the value from the previous run)
-    if (current.map == "RoomOpening" && old.total_seconds > current.total_seconds)
+    if ((current.map == "F_Opening01" ||current.map == "F_Opening02" ||current.map == "F_Opening03" || current.map=="N_Opening01")
+         && old.total_seconds > current.total_seconds)
         return true;
 }
 
 onSplit
 {
     vars.boss_killed = false;
-    vars.has_beat_hades = false;
-    vars.exit_to_hades = false;
+    vars.has_beat_chronos = false;
+    vars.chronos_phased = false;
+    vars.exit_to_chronos = false;
 }
 
 split
 {
-    // Split on Hades Kill
-    if (!vars.still_in_arena && vars.has_beat_hades)
+    // Split on Chronos Kill
+    if (!vars.still_in_arena && vars.has_beat_chronos)
     {
-        vars.Log("Splitting for Hades kill");
+        vars.Log("Splitting for Chronos kill");
 
         // Disable boss kill detection until we leave the boss arena
         vars.still_in_arena = true;
@@ -262,9 +280,9 @@ split
     var entered_new_room = current.map != old.map;
 
     // Split on Boss Kill
-    if (settings["splitOnBossKill"] && !vars.still_in_arena && (vars.boss_killed || vars.exit_to_hades))
+    if (settings["splitOnBossKill"] && !vars.still_in_arena && (vars.boss_killed || vars.exit_to_chronos))
     {
-        vars.Log("(splitOnBossKill) Splitting for Sack handoff or boss kill");
+        vars.Log("(splitOnBossKill) Splitting for sand dive or boss kill");
 
         // Disable boss kill detection until we leave the boss arena
         vars.still_in_arena = true;
@@ -272,11 +290,11 @@ split
         return true;
     }
 
-    // Split on run start if House Splits are enabled
+    // Split on run start if Crossroads Splits are enabled
     if (settings["multiWep"] && settings["houseSplits"])
     {
         if ( // starting a new run
-            current.map == "RoomOpening" &&
+            current.map == "Hub_PreRun" &&
             (old.total_seconds > current.total_seconds)
         )
         {
@@ -297,8 +315,10 @@ split
     if (!settings["splitOnBossKill"] && entered_new_room)
     {
         if ( // in post-boss room or hades fight
-            current.map == "A_PostBoss01" || current.map == "B_PostBoss01" ||
-            current.map == "C_PostBoss01" || current.map == "D_Boss01"
+            current.map == "F_PostBoss01" || current.map == "G_PostBoss01" ||
+            current.map == "H_PostBoss01" || current.map == "N_PostBoss01" ||
+            current.map == "O_PostBoss01" || current.map == "P_PostBoss01" ||
+            current.map == "I_Boss01"
         )
         {
             vars.Log("Splitting for chamber transition");
@@ -306,16 +326,19 @@ split
         }
     }
 
-    // Split when leaving midbiome
+    // Split when leaving interbiome
     if (settings["midbiome"] && entered_new_room)
     {
         if ( // left post-boss room
-            old.map == "A_PostBoss01" ||
-            old.map == "B_PostBoss01" ||
-            old.map == "C_PostBoss01"
+            old.map == "F_PostBoss01" ||
+            old.map == "G_PostBoss01" ||
+            old.map == "H_PostBoss01" ||
+            old.map == "N_PostBoss01" ||
+            old.map == "O_PostBoss01" ||
+            old.map == "P_PostBoss01" 
         )
         {
-            vars.Log("Splitting for leaving midbiome");
+            vars.Log("Splitting for leaving interbiome");
             return true;
         }
     }
@@ -324,9 +347,9 @@ split
     if (settings["enterBossArena"] && entered_new_room)
     {
         if ( // in boss arena
-            current.map == "A_Boss01" || current.map == "A_Boss02" ||
-            current.map == "A_Boss03" || current.map == "B_Boss01" ||
-            current.map == "B_Boss02" || current.map == "C_Boss01"
+            current.map == "F_Boss01" || current.map == "G_Boss01" ||
+            current.map == "H_Boss01" || current.map == "N_Boss01" ||
+            current.map == "O_Boss01" || current.map == "P_Boss01"
         )
         {
             vars.Log("Splitting for entering boss arena");
@@ -334,16 +357,7 @@ split
         }
     }
 
-    // Split on Loyalty Card pickup
-    if (settings["loyaltyCard"] && vars.loyalty_card_pickup && !vars.still_in_arena)
-    {
-        vars.Log("Splitting for Loyalty Card pickup");
-
-        // Disable detection until we leave the boss arena
-        vars.still_in_arena = true;
-
-        return true;
-    }
+ 
 }
 
 onReset
@@ -353,21 +367,17 @@ onReset
     old.total_seconds = 0.5f;
 
     vars.has_beat_hades = false;
-    vars.loyalty_card_pickup = false;
     vars.boss_killed = false;
 
     vars.still_in_arena = false;
-    vars.quick_restart_mod = false;
 }
 
 reset
 {
-  // Reset and clear state if Zag is currently in the courtyard.  Don't reset in multiweapon runs
-    if(!settings["multiWep"] && current.map == "RoomPreRun")
+  // Reset and clear state if Mel is currently in the courtyard.  Don't reset in multiweapon runs
+    if(!settings["multiWep"] && current.map == "Hub_PreRun")
         return true;
 
-    if(vars.quick_restart_mod)
-        return true;
 }
 
 gameTime
